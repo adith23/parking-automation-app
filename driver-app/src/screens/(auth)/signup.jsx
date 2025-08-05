@@ -4,46 +4,47 @@ import React from 'react';
 import { Link, router } from 'expo-router';
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import authService from '../services/authService';
 import FrontVector from '../../assets/images/login-front-vector.svg';
 import RearVector from '../../assets/images/login-rear-vector.svg';
 import GoogleIcon from '../../assets/images/google-icon.svg';
 import XIcon from '../../assets/images/x-icon.svg';
 import FacebookIcon from '../../assets/images/facebook-icon.svg';
 
-export default function Login() {
-  const [email, onChangeEmail] = React.useState('');
+export default function Signup() {
+    const [email, onChangeEmail] = React.useState('');
   const [password, onChangePassword] = React.useState('');
-
-  const handleSubmit = async () => {
+  const [username, onChangeUsername] = React.useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const response = await axios.post('#####', {
-        email,
-        password,
-      });
-
-      await AsyncStorage.setItem('token', response.data.token);
-
-      router.push('/(tab)'); // Navigate to another page
+      console.log({ username, email, password }); 
+      await authService.register({ username, email, password });
+      router.push('/(auth)');
     } catch (error) {
-      console.error('Login failed', error);
-      if (error.response) {
-        alert(`Login failed: ${error.response.data.error}`);
-      } else {
-        alert('Login failed: Network error or server not reachable');
-        router.push('/(tab)')
-      }
+      console.error("Registration failed", error.response?.data || error.message);
     }
-  };
+  }; 
 
   return (
-    <SafeAreaProvider>
+<SafeAreaProvider>
       <SafeAreaView style={styles.container}>
         <FrontVector style={styles.image} />
         <View style={styles.header}>
-          <Text style={styles.title}>Sign In Your Account</Text>
+          <Text style={styles.title}>Create Your Account</Text>
         </View>
         <ScrollView contentContainerStyle={styles.scrollView}
           keyboardShouldPersistTaps="handled">
+          <Text style={styles.lable}>Use Name</Text>
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeUsername}
+            placeholder="User Name"
+            value={username}
+            keyboardType="username"
+            autoCapitalize="none"
+          />
           <Text style={styles.lable}>Email</Text>
           <TextInput
             style={styles.input}
@@ -63,7 +64,7 @@ export default function Login() {
           />
           <View style={styles.centeraliment}>
             <TouchableOpacity style={styles.submitbtn} onPress={handleSubmit}>
-              <Text style={styles.btntext}>Submit</Text>
+              <Text style={styles.btntext}>Sign Up</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.centeraliment}>
@@ -76,7 +77,7 @@ export default function Login() {
           </View>
           <View style={styles.navigation}>
             <Link href="/signup">
-              <Text style={styles.linktext}>Create New Account</Text>
+              <Text style={styles.linktext}>Have an account? Log In</Text>
             </Link>
           </View>
         </ScrollView>
@@ -157,7 +158,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navigation: {
-    marginTop: -50,
+    marginTop: -30,
     justifyContent: 'center',
     flex: 1,
     alignItems: 'center',
