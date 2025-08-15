@@ -5,13 +5,7 @@ pydantic
 passlib[bcrypt]
 python-jose[cryptography]
 psycopg2-binary
-sumy
-pdfplumber
-python-multipart
-yt-dlp
-numpy
-google-generativeai
-psycopg2-binary
-aiofiles
-youtube-transcript-api
 python-dotenv
+
+
+
