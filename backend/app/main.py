@@ -1,15 +1,22 @@
 import logging
-from fastapi import FastAPI # type: ignore
-from fastapi.middleware.cors import CORSMiddleware # type: ignore
-from database import engine
-import models
+from fastapi import FastAPI  # type: ignore
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+from .database import engine
+from .models.owner.owner import Base
 
-from routes import user
+from .api.v1.api_routes import api_router
 
-logging.basicConfig(level=logging.INFO,format='%(asctime)s - %(levelname)s - %(message)s')
-origins = ["http://localhost:3000", "http://192.168.1.4:19006"]
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+origins = [
+    "http://localhost:3000",
+    "http://192.168.43.182:8081",
+    "http://192.168.1.4:8000",
+    "http://localhost:8000",
+]
 
-models.Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -19,10 +26,7 @@ app.add_middleware(
     allow_origins=origins,  # Adjust as needed
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-
-# Include the user router
-app.include_router(user.router, prefix="/user", tags=["User"])
-
+app.include_router(api_router, prefix="/api/v1")
