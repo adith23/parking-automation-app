@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+
+# Environment variables
+.env
+
+# VSCode settings
+.vscode/
+
+# Optional: database files
+*.db
+
+# Optional: log files
+*.log
