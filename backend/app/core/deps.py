@@ -21,7 +21,7 @@ def get_current_owner(
         )
     owner = (
         db.query(ParkingLotOwner)
-        .filter(ParkingLotOwner.email == payload["sub"])
+        .filter(ParkingLotOwner.email == payload["email"])
         .first()
     )
     if not owner:
@@ -40,7 +40,7 @@ def get_current_driver(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
         )
-    driver = db.query(Driver).filter(Driver.email == payload["sub"]).first()
+    driver = db.query(Driver).filter(Driver.email == payload["email"]).first()
     if not driver:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"

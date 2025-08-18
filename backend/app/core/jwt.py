@@ -6,7 +6,7 @@ import os
 # JWT configuration (env-configurable)
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me-in-production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30000"))
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):

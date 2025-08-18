@@ -14,6 +14,5 @@ class ParkingLotOwner(Base):
     phone_number = Column(String(20), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # Example relationships (uncomment and adjust as you add related models)
-    # parking_lots = relationship("ParkingLot", back_populates="owner")
+    parking_lots = relationship("ParkingLot", back_populates="owner")
     # subscription_plans = relationship("SubscriptionPlan", back_populates="owner")

@@ -3,6 +3,8 @@ import { SafeAreaView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MyLogo from "../assets/images/mylogo.svg";
+import 'expo-dev-client';
+
 
 export default function Index() {
   const router = useRouter();
