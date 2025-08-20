@@ -8,15 +8,22 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
-  Alert,
+  Alert,  
   ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import MaterialIcon from "react-native-vector-icons/MaterialIcons";
 import Slider from "@react-native-community/slider";
-import HeaderIcon from "../../assets/images/fluent_bot-add-32-regular.svg";
-import api from "../../services/api";
-import LocationPickerModal from "../../components/LocationPickerModal"; 
+import HeaderIcon from "../assets/images/fluent_bot-add-32-regular.svg";
+import DefaultIcon from "../assets/images/hugeicons_add-02.svg";
+import Group from "../assets/images/Group.svg";
+import Vehicle from "../assets/images/fluent_vehicle-car-parking-16-regular.svg";
+import Pricing from "../assets/images/majesticons_dollar-circle-line.svg";
+import Timing from "../assets/images/mingcute_time-line.svg";
+import Info from "../assets/images/tabler_list-details.svg";
+import Camera from "../assets/images/fluent_camera-add-24-regular.svg";
+import api from "../services/api";
+import LocationPickerModal from "../components/LocationPickerModal"; 
 
 const AddParkingLotScreen = () => {
   
@@ -104,7 +111,7 @@ const AddParkingLotScreen = () => {
         {/* Parking Lot Name Input */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <MaterialIcon name="add" size={20} color="#555" />
+            <DefaultIcon name="add" size={20} color="#555" />
             <Text style={styles.cardTitle}>Enter Parking Lot Name</Text>
           </View>
           <View style={styles.inputContainer}>
@@ -121,7 +128,7 @@ const AddParkingLotScreen = () => {
         {/* Location Input */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <MaterialIcon name="location-pin" size={20} color="#555" />
+            <Group name="location-pin" size={20} color="#555" />
             <Text style={styles.cardTitle}>
               Enter Location or Select on Map
             </Text>
@@ -143,7 +150,7 @@ const AddParkingLotScreen = () => {
         {/* Slots Available Slider */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Icon name="car" size={20} color="#555" />
+            <Vehicle name="car" size={20} color="#555" />
             <Text style={styles.cardTitle}>Enter Slots Available</Text>
           </View>
           <View style={styles.sliderContainer}>
@@ -193,7 +200,7 @@ const AddParkingLotScreen = () => {
         <View style={styles.rowContainer}>
           <View style={[styles.card1, styles.halfCard]}>
             <View style={styles.cardHeader1}>
-              <Icon name="dollar-sign" size={20} color="#555" />
+              <Pricing name="dollar-sign" size={20} color="#555" />
               <Text style={styles.cardTitle1}>Add Pricing</Text>
             </View>
             <View style={styles.priceInputContainer}>
@@ -209,7 +216,7 @@ const AddParkingLotScreen = () => {
           </View>
           <View style={[styles.card1, styles.halfCard1, { flex: 1.9 }]}>
             <View style={styles.cardHeader1}>
-              <MaterialIcon name="access-time" size={20} color="#555" />
+              <Timing name="access-time" size={20} color="#555" />
               <Text style={styles.cardTitle1}>Open & Close Time</Text>
             </View>
             <View style={styles.timeRow}>
@@ -232,7 +239,7 @@ const AddParkingLotScreen = () => {
         {/* Additional Information */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <MaterialIcon name="list-alt" size={20} color="#555" />
+            <Info name="list-alt" size={20} color="#555" />
             <Text style={styles.cardTitle}>Add more information</Text>
           </View>
           <TextInput
@@ -249,7 +256,7 @@ const AddParkingLotScreen = () => {
         {/* Photos & Videos */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <MaterialIcon name="photo-camera" size={20} color="#555" />
+            <Camera name="photo-camera" size={20} color="#555" />
             <Text style={styles.cardTitle}>Add Photos & Videos</Text>
           </View>
           <View style={styles.mediaContainer}>
@@ -289,8 +296,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 30,
-    paddingTop: 50,
+    paddingVertical: 35,
+    paddingTop: 40,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
   },
