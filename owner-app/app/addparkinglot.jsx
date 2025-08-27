@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,7 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   StatusBar,
-  Alert,  
+  Alert,
   ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
@@ -23,28 +23,144 @@ import Timing from "../assets/images/mingcute_time-line.svg";
 import Info from "../assets/images/tabler_list-details.svg";
 import Camera from "../assets/images/fluent_camera-add-24-regular.svg";
 import api from "../services/api";
-import LocationPickerModal from "../components/LocationPickerModal"; 
+import LocationPickerModal from "../components/LocationPickerModal";
+import Constants from "expo-constants";
 
 const AddParkingLotScreen = () => {
-  
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(null); // Will store { lat, lon }
   const [isMapVisible, setMapVisible] = useState(false);
   const [totalSlots, setTotalSlots] = useState(10);
-  const [pricePerHour, setPricePerHour] = useState("25");
-  const [openTime, setOpenTime] = useState("06:00");
-  const [closeTime, setCloseTime] = useState("18:00");
+  const [pricePerHour, setPricePerHour] = useState("");
+  const [openTime, setOpenTime] = useState("");
+  const [closeTime, setCloseTime] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   //const [photos, setPhotos] = useState([]);
   //const [videos, setVideos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+
+  // Create a ref to track programmatic changes
+  const isProgrammaticChange = useRef(false);
+
+  const GOOGLE_MAPS_API_KEY =
+    Constants.expoConfig?.extra?.googleMapsApiKey ||
+    Constants.manifest?.extra?.googleMapsApiKey ||
+    Constants.manifest2?.extra?.googleMapsApiKey;
+    //process.env.GOOGLE_MAPS_API_KEY ||
+    //"your-api-key-here"; // fallback for testing
+
+  // Debounced search for address suggestions
+  const searchAddressSuggestions = useCallback(
+    async (searchText) => {
+      if (
+        !GOOGLE_MAPS_API_KEY ||
+        !searchText?.trim() ||
+        searchText.trim().length < 3
+      ) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        setIsLoadingSuggestions(true);
+        const encoded = encodeURIComponent(searchText.trim());
+        const res = await fetch(
+          `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encoded}&key=${GOOGLE_MAPS_API_KEY}&types=address&language=en`
+        );
+        const json = await res.json();
+
+        if (json.status === "OK" && json.predictions?.length) {
+          setSuggestions(json.predictions);
+          setShowSuggestions(true);
+        } else {
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } catch (error) {
+        console.error("Failed to fetch suggestions:", error);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    },
+    [GOOGLE_MAPS_API_KEY]
+  );
+
+  // Debounce the search
+  useEffect(() => {
+
+    if (isProgrammaticChange.current) {
+      isProgrammaticChange.current = false;
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      searchAddressSuggestions(address);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [address, searchAddressSuggestions]);
+
+  const handleAddressSelect = async (prediction) => {
+    setShowSuggestions(false);
+    try {
+      // Get place details for the selected suggestion
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=formatted_address,geometry&key=${GOOGLE_MAPS_API_KEY}`
+      );
+      const json = await res.json();
+
+      if (json.status === "OK" && json.result) {
+        const { formatted_address, geometry } = json.result;
+        const { lat, lng } = geometry.location;
+
+        isProgrammaticChange.current = true;
+        setAddress(formatted_address);
+        setSelectedLocation({ latitude: lat, longitude: lng });
+        setShowSuggestions(false);
+        setSuggestions([]);
+      }
+    } catch (error) {
+      console.error("Failed to get place details:", error);
+    }
+  };
+
+  const reverseGeocode = async (lat, lng) => {
+    if (!GOOGLE_MAPS_API_KEY) return;
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en`
+      );
+      const json = await res.json();
+      if (json.status === "OK" && json.results?.length) {
+        const formatted = json.results[0].formatted_address;
+
+        isProgrammaticChange.current = true;
+        setAddress(formatted);
+      }
+    } catch (e) {
+      console.error("Reverse geocode failed:", e);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name || !address) {
       Alert.alert(
         "Validation Error",
         "Parking Lot Name and Address are required."
+      );
+      return;
+    }
+    if (!selectedLocation?.latitude || !selectedLocation?.longitude) {
+      Alert.alert(
+        "Validation Error",
+        "Please set the parking lot location on the map or search the address to get coordinates."
       );
       return;
     }
@@ -79,6 +195,8 @@ const AddParkingLotScreen = () => {
       setOpenTime("06:00");
       setCloseTime("18:00");
       setAdditionalInfo("");
+      setSuggestions([]);
+      setShowSuggestions(false);
     } catch (error) {
       const errorMessage =
         error.response?.data?.detail || "An unexpected error occurred.";
@@ -87,6 +205,23 @@ const AddParkingLotScreen = () => {
       setSubmitting(false);
     }
   };
+
+  const renderSuggestion = ({ item }) => (
+    <TouchableOpacity
+      style={styles.suggestionItem}
+      onPress={() => handleAddressSelect(item)}
+    >
+      <MaterialIcon
+        name="location-on"
+        size={16}
+        color="#666"
+        style={styles.suggestionIcon}
+      />
+      <Text style={styles.suggestionText} numberOfLines={2}>
+        {item.description}
+      </Text>
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -98,6 +233,7 @@ const AddParkingLotScreen = () => {
         onClose={() => setMapVisible(false)}
         onLocationSelect={(location) => {
           setSelectedLocation(location);
+          reverseGeocode(location.latitude, location.longitude);
         }}
       />
 
@@ -140,9 +276,55 @@ const AddParkingLotScreen = () => {
               placeholderTextColor="#888"
               value={address}
               onChangeText={setAddress}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowSuggestions(true);
+              }}
             />
-            <TouchableOpacity onPress={() => setMapVisible(true)}>
-              <MaterialIcon name="search" size={24} color="#555" />
+            {isLoadingSuggestions && (
+              <ActivityIndicator
+                size="small"
+                color="#555"
+                style={styles.loadingIndicator}
+              />
+            )}
+          </View>
+
+          {/* Address Suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <View style={styles.suggestionsContainer}>
+              <ScrollView
+                style={styles.suggestionsList}
+                nestedScrollEnabled={true}
+                keyboardShouldPersistTaps="handled"
+              >
+                {suggestions.map((item) => (
+                  <TouchableOpacity
+                    key={item.place_id}
+                    style={styles.suggestionItem}
+                    onPress={() => handleAddressSelect(item)}
+                  >
+                    <MaterialIcon
+                      name="location-on"
+                      size={16}
+                      color="#666"
+                      style={styles.suggestionIcon}
+                    />
+                    <Text style={styles.suggestionText} numberOfLines={2}>
+                      {item.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          <View style={styles.mapButtonContainer}>
+            <TouchableOpacity
+              style={styles.mapButton}
+              onPress={() => setMapVisible(true)}
+            >
+              <MaterialIcon name="map" size={20} color="#007AFF" />
+              <Text style={styles.mapButtonText}>Pick on Map</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -225,12 +407,14 @@ const AddParkingLotScreen = () => {
                 value={openTime}
                 onChangeText={setOpenTime}
                 placeholder="HH:MM"
+                placeholderTextColor="#888" 
               />
               <TextInput
                 style={[styles.timeInput, styles.timeText]}
                 value={closeTime}
                 onChangeText={setCloseTime}
                 placeholder="HH:MM"
+                placeholderTextColor="#888" 
               />
             </View>
           </View>
@@ -344,6 +528,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
   },
+  loadingIndicator: {
+    marginLeft: 10,
+  },
+  suggestionsContainer: {
+    backgroundColor: "#FFF",
+    borderRadius: 10,
+    marginTop: 5,
+    maxHeight: 200,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  suggestionsList: {
+    maxHeight: 200,
+  },
+  suggestionsContainer: {
+    backgroundColor: "#FFF",
+    borderRadius: 10,
+    marginTop: 5,
+    maxHeight: 200,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  suggestionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  suggestionIcon: {
+    marginRight: 10,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#333",
+  },
+  mapButtonContainer: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  mapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+  },
+  mapButtonText: {
+    marginLeft: 8,
+    color: "#007AFF",
+    fontWeight: "600",
+  },
   sliderContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -434,12 +678,13 @@ const styles = StyleSheet.create({
   textArea: {
     backgroundColor: "#fff",
     borderRadius: 10,
+    fontWeight: 600,
     padding: 10,
     fontSize: 14,
     textAlignVertical: "top",
     height: 100,
     marginTop: 5,
-    color: "#555",
+    color: "#333",
   },
   mediaContainer: {
     flexDirection: "row",

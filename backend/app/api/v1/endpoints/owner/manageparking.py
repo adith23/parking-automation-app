@@ -1,45 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import time
-from geoalchemy2.elements import WKTElement
 
 from app.schemas.owner.manageparking import (
     ParkingLotCreate,
     ParkingLotResponse,
     ParkingLotUpdate,
 )
-from app.models.owner import manageparking as parking_model
 from app.models.owner.owner import ParkingLotOwner
 from app.core.deps import get_db, get_current_owner
+from app.services.parking_service import parking_service
 
 router = APIRouter()
-
-
-def validate_parking_lot(parking_lot_data: dict):
-    """Validate parking lot data"""
-    if parking_lot_data.get("total_slots", 0) <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Total slots must be greater than 0",
-        )
-
-    if parking_lot_data.get("price_per_hour", 0) <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Price per hour must be greater than 0",
-        )
-
-    # Validate time format
-    try:
-        if "open_time" in parking_lot_data:
-            time.fromisoformat(str(parking_lot_data["open_time"]))
-        if "close_time" in parking_lot_data:
-            time.fromisoformat(str(parking_lot_data["close_time"]))
-    except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid time format"
-        )
 
 
 @router.post(
@@ -57,26 +29,17 @@ def create_parking_lot(
     """
     Create a new parking lot owned by the current user.
     """
-    parking_lot_data = parking_lot_in.dict()
-
-    coords = parking_lot_data.pop("gps_coordinates", None)
-    if coords:
-        # Convert to WKT format for GeoAlchemy2
-        wkt_point = f"POINT({coords['longitude']} {coords['latitude']})"
-        parking_lot_data["gps_coordinates"] = WKTElement(wkt_point, srid=4326)
-
-    db_parking_lot = parking_model.ParkingLot(
-        **parking_lot_data, owner_id=current_owner.id
+    return parking_service.create_parking_lot(
+        owner_id=current_owner.id,
+        parking_lot_data=parking_lot_in.dict(),
+        db=db
     )
-    
-    db.add(db_parking_lot)
-    db.commit()
-    db.refresh(db_parking_lot)
-    return db_parking_lot
 
 
 @router.get(
-    "/", response_model=List[ParkingLotResponse], summary="List owner's parking lots"
+    "/", 
+    response_model=List[ParkingLotResponse], 
+    summary="List owner's parking lots"
 )
 def get_owner_parking_lots(
     *,
@@ -88,14 +51,12 @@ def get_owner_parking_lots(
     """
     Retrieve all parking lots owned by the current user.
     """
-    parking_lots = (
-        db.query(parking_model.ParkingLot)
-        .filter(parking_model.ParkingLot.owner_id == current_owner.id)
-        .offset(skip)
-        .limit(limit)
-        .all()
+    return parking_service.get_owner_parking_lots(
+        owner_id=current_owner.id,
+        db=db,
+        skip=skip,
+        limit=limit
     )
-    return parking_lots
 
 
 @router.get(
@@ -112,21 +73,11 @@ def get_parking_lot(
     """
     Retrieve a specific parking lot by its ID.
     """
-    parking_lot = (
-        db.query(parking_model.ParkingLot)
-        .filter(parking_model.ParkingLot.id == parking_lot_id)
-        .first()
+    return parking_service.get_parking_lot(
+        parking_lot_id=parking_lot_id,
+        owner_id=current_owner.id,
+        db=db
     )
-    if not parking_lot:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Parking lot not found"
-        )
-    if getattr(parking_lot, "owner_id") != getattr(current_owner, "id"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this parking lot",
-        )
-    return parking_lot
 
 
 @router.put(
@@ -144,20 +95,14 @@ def update_parking_lot(
     """
     Update a parking lot's details.
     """
-    db_parking_lot = get_parking_lot(
-        db=db, parking_lot_id=parking_lot_id, current_owner=current_owner
+    return parking_service.update_parking_lot(
+        parking_lot_id=parking_lot_id,
+        owner_id=current_owner.id,
+        updates=parking_lot_in.dict(exclude_unset=True),
+        db=db
     )
 
-    update_data = parking_lot_in.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_parking_lot, key, value)
-
-    db.add(db_parking_lot)
-    db.commit()
-    db.refresh(db_parking_lot)
-    return db_parking_lot
-
-
+'''
 @router.delete(
     "/{parking_lot_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -172,9 +117,29 @@ def delete_parking_lot(
     """
     Delete a parking lot.
     """
-    db_parking_lot = get_parking_lot(
-        db=db, parking_lot_id=parking_lot_id, current_owner=current_owner
+    parking_service.delete_parking_lot(
+        parking_lot_id=parking_lot_id,
+        owner_id=current_owner.id,
+        db=db
     )
-    db.delete(db_parking_lot)
-    db.commit()
-    return
+
+
+@router.get(
+    "/{parking_lot_id}/stats",
+    summary="Get parking lot statistics",
+)
+def get_parking_lot_stats(
+    *,
+    db: Session = Depends(get_db),
+    parking_lot_id: int,
+    current_owner: ParkingLotOwner = Depends(get_current_owner),
+):
+    """
+    Get statistics for a parking lot.
+    """
+    return parking_service.get_lot_stats(
+        lot_id=parking_lot_id,
+        owner_id=current_owner.id,
+        db=db
+    )
+'''

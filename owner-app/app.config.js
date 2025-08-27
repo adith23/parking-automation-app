@@ -9,11 +9,13 @@ export default {
     icon: "./assets/images/icon.png",
     scheme: "ownerapp",
     userInterfaceStyle: "automatic",
-    newArchEnabled: true, 
+    newArchEnabled: true,
     extra: {
       eas: {
         projectId: "36ab83fd-e40d-4f25-8109-01e22820d52d",
       },
+      // Expose the Google Maps API key to the app at runtime
+      googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
     },
     ios: {
       supportsTablet: true,
@@ -22,7 +24,8 @@ export default {
         googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY,
       },
       infoPlist: {
-        NSLocationWhenInUseUsageDescription: "This app uses your location to help you find your current position on the map for setting up your parking lot."
+        NSLocationWhenInUseUsageDescription:
+          "This app uses your location to help you find your current position on the map for setting up your parking lot.",
       },
     },
     android: {
@@ -37,9 +40,7 @@ export default {
           apiKey: process.env.GOOGLE_MAPS_API_KEY,
         },
       },
-      permissions: [
-        "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      permissions: ["android.permission.ACCESS_FINE_LOCATION"],
     },
     web: {
       bundler: "metro",
