@@ -1,18 +1,21 @@
 import React from "react";
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import HomeIcon from "../assets/icons/Home.svg";
+import AnalyticsIcon from "../assets/icons/Analytics.svg";
+import ActivityIcon from "../assets/icons/Activity.svg";
+import ManageIcon from "../assets/icons/Manage.svg";
+import SettingsIcon from "../assets/icons/Settings.svg";
 
 export default function BottomTabBar({ state, descriptors, navigation }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom || 8 }]}>
+    <View style={[styles.wrapper, { paddingBottom: insets.bottom || 8 }]}>
+      <View style={styles.container}>
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
         const { options } = descriptors[route.key];
-
-        const label = options.tabBarLabel ?? options.title ?? route.name;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -38,45 +41,52 @@ export default function BottomTabBar({ state, descriptors, navigation }) {
             style={styles.item}
             activeOpacity={0.7}
           >
-            <FontAwesome
-              name={getIconName(route.name)}
-              size={24}
-              color={isFocused ? "#000" : "#9CA3AF"}
-            />
-            <Text style={[styles.label, isFocused && styles.labelActive]}>
-              {label}
-            </Text>
+            {getIcon(route.name, isFocused)}
           </TouchableOpacity>
         );
       })}
+      </View>
     </View>
   );
 }
 
-function getIconName(name) {
+function getIcon(name, isFocused) {
+  const iconProps = {
+    width: 32,
+    height: 32,
+    color: isFocused ? "#000" : "#9CA3AF",
+  };
+
   switch (name) {
     case "home":
-      return "home";
+      return <HomeIcon {...iconProps} />;
     case "bookings":
-      return "calendar";
+      return <ActivityIcon {...iconProps} />;
     case "manage":
-      return "tasks";
+      return <ManageIcon {...iconProps} />;
     case "analytics":
-      return "bar-chart";
+      return <AnalyticsIcon {...iconProps} />;
     case "settings":
-      return "cog";
+      return <SettingsIcon {...iconProps} />;
     default:
-      return "circle";
+      return <HomeIcon {...iconProps} />;
   }
 }
 
 const styles = StyleSheet.create({
+  wrapper: {
+    backgroundColor: "#000", 
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 2, // This creates the black stroke effect
+  },
   container: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderColor: "#eee",
+    backgroundColor: "#ffff",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
     paddingTop: 8,
+    paddingBottom: 6,
     justifyContent: "space-around",
   },
   item: {
@@ -84,13 +94,5 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 6,
     gap: 4,
-  },
-  label: {
-    fontSize: 10,
-    color: "#9CA3AF",
-  },
-  labelActive: {
-    color: "#000",
-    fontWeight: "600",
   },
 });

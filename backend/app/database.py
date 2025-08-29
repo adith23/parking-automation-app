@@ -1,10 +1,9 @@
-from sqlalchemy import create_engine  # type: ignore
-from sqlalchemy.ext.declarative import declarative_base  # type: ignore
-from sqlalchemy.orm import sessionmaker  # type: ignore
+from sqlalchemy import create_engine 
+from sqlalchemy.ext.declarative import declarative_base 
+from sqlalchemy.orm import sessionmaker  
 import os
 
-# Database connection URL format:
-# postgresql://<username>:<password>@<host>:<port>/<database_name>
+# Database connection:
 DATABASE_URL = os.getenv(
     "DATABASE_URL", "postgresql://postgres:pass1234@localhost:5432/ParkingSystem"
 )

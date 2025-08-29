@@ -32,9 +32,10 @@ python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## to mobile
 
-```
-cd mobile
-```
+eas build --profile development --platform android
+
+npx expo start --dev-client
+
 
 ```
 npm install
@@ -43,7 +44,7 @@ npm install
 ```
 npx expo
 npx expo start
+npx expo start --clear
 
 ```
 
-In react native how does global context like theme, colors, fonts, loading spinners, are developed? includes what files should be created, what are industry best practices etc.

@@ -25,6 +25,8 @@ import Camera from "../assets/images/fluent_camera-add-24-regular.svg";
 import api from "../services/api";
 import LocationPickerModal from "../components/LocationPickerModal";
 import Constants from "expo-constants";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 const AddParkingLotScreen = () => {
   const [name, setName] = useState("");
@@ -42,6 +44,8 @@ const AddParkingLotScreen = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [isOpenTimePickerVisible, setOpenTimePickerVisible] = useState(false);
+  const [isCloseTimePickerVisible, setCloseTimePickerVisible] = useState(false);
 
   // Create a ref to track programmatic changes
   const isProgrammaticChange = useRef(false);
@@ -50,8 +54,6 @@ const AddParkingLotScreen = () => {
     Constants.expoConfig?.extra?.googleMapsApiKey ||
     Constants.manifest?.extra?.googleMapsApiKey ||
     Constants.manifest2?.extra?.googleMapsApiKey;
-    //process.env.GOOGLE_MAPS_API_KEY ||
-    //"your-api-key-here"; // fallback for testing
 
   // Debounced search for address suggestions
   const searchAddressSuggestions = useCallback(
@@ -94,7 +96,6 @@ const AddParkingLotScreen = () => {
 
   // Debounce the search
   useEffect(() => {
-
     if (isProgrammaticChange.current) {
       isProgrammaticChange.current = false;
       return;
@@ -147,6 +148,35 @@ const AddParkingLotScreen = () => {
     } catch (e) {
       console.error("Reverse geocode failed:", e);
     }
+  };
+
+  // DateTime picker handlers
+  const showOpenTimePicker = () => {
+    setOpenTimePickerVisible(true);
+  };
+
+  const hideOpenTimePicker = () => {
+    setOpenTimePickerVisible(false);
+  };
+
+  const handleOpenTimeConfirm = (date) => {
+    const timeString = date.toTimeString().slice(0, 5); // Get HH:MM format
+    setOpenTime(timeString);
+    hideOpenTimePicker();
+  };
+
+  const showCloseTimePicker = () => {
+    setCloseTimePickerVisible(true);
+  };
+
+  const hideCloseTimePicker = () => {
+    setCloseTimePickerVisible(false);
+  };
+
+  const handleCloseTimeConfirm = (date) => {
+    const timeString = date.toTimeString().slice(0, 5); // Get HH:MM format
+    setCloseTime(timeString);
+    hideCloseTimePicker();
   };
 
   const handleSubmit = async () => {
@@ -206,23 +236,6 @@ const AddParkingLotScreen = () => {
     }
   };
 
-  const renderSuggestion = ({ item }) => (
-    <TouchableOpacity
-      style={styles.suggestionItem}
-      onPress={() => handleAddressSelect(item)}
-    >
-      <MaterialIcon
-        name="location-on"
-        size={16}
-        color="#666"
-        style={styles.suggestionIcon}
-      />
-      <Text style={styles.suggestionText} numberOfLines={2}>
-        {item.description}
-      </Text>
-    </TouchableOpacity>
-  );
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#000000ff" />
@@ -235,6 +248,25 @@ const AddParkingLotScreen = () => {
           setSelectedLocation(location);
           reverseGeocode(location.latitude, location.longitude);
         }}
+      />
+
+      {/* DateTime Picker Modals */}
+      <DateTimePickerModal
+        isVisible={isOpenTimePickerVisible}
+        mode="time"
+        onConfirm={handleOpenTimeConfirm}
+        onCancel={hideOpenTimePicker}
+        date={openTime ? new Date(`2000-01-01T${openTime}:00`) : new Date()}
+        is24Hour={true}
+      />
+
+      <DateTimePickerModal
+        isVisible={isCloseTimePickerVisible}
+        mode="time"
+        onConfirm={handleCloseTimeConfirm}
+        onCancel={hideCloseTimePicker}
+        date={closeTime ? new Date(`2000-01-01T${closeTime}:00`) : new Date()}
+        is24Hour={true}
       />
 
       {/* Header */}
@@ -356,7 +388,7 @@ const AddParkingLotScreen = () => {
                   if (!isNaN(num)) {
                     setTotalSlots(Math.max(1, Math.min(100, num)));
                   } else if (text === "") {
-                    setTotalSlots(0); // Reset to minimum if input is cleared
+                    setTotalSlots(0);
                   }
                 }}
                 keyboardType="numeric"
@@ -386,36 +418,58 @@ const AddParkingLotScreen = () => {
               <Text style={styles.cardTitle1}>Add Pricing</Text>
             </View>
             <View style={styles.priceInputContainer}>
-              <TextInput
-                style={styles.priceInput}
-                placeholder="$25/hr"
-                placeholderTextColor="#888"
-                keyboardType="numeric"
-                value={pricePerHour}
-                onChangeText={setPricePerHour}
-              />
+              <View style={styles.priceInputWrapper}>
+                <Text style={styles.currencySymbol}>Rs.</Text>
+                <TextInput
+                  style={styles.priceInput}
+                  placeholder="150"
+                  placeholderTextColor="#888"
+                  keyboardType="numeric"
+                  value={pricePerHour}
+                  onChangeText={(text) => {
+                    const cleanText = text.replace(/[^0-9.]/g, "");
+                    setPricePerHour(cleanText);
+                  }}
+                />
+                <Text style={styles.currencyUnit}>/hr</Text>
+              </View>
             </View>
           </View>
+
           <View style={[styles.card1, styles.halfCard1, { flex: 1.9 }]}>
             <View style={styles.cardHeader1}>
               <Timing name="access-time" size={20} color="#555" />
               <Text style={styles.cardTitle1}>Open & Close Time</Text>
             </View>
             <View style={styles.timeRow}>
-              <TextInput
+              <TouchableOpacity
                 style={[styles.timeInput, styles.timeText]}
-                value={openTime}
-                onChangeText={setOpenTime}
-                placeholder="HH:MM"
-                placeholderTextColor="#888" 
-              />
-              <TextInput
+                onPress={showOpenTimePicker}
+              >
+                <Text
+                  style={[
+                    styles.timeText,
+                    openTime ? styles.timeValue : styles.timePlaceholder,
+                  ]}
+                >
+                  {openTime || "HH:MM"}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 style={[styles.timeInput, styles.timeText]}
-                value={closeTime}
-                onChangeText={setCloseTime}
-                placeholder="HH:MM"
-                placeholderTextColor="#888" 
-              />
+                onPress={showCloseTimePicker}
+              >
+                <Text
+                  style={[
+                    styles.timeText,
+                    closeTime ? styles.timeValue : styles.timePlaceholder,
+                  ]}
+                >
+                  {closeTime || "HH:MM"}
+                </Text>
+              </TouchableOpacity>
+              
             </View>
           </View>
         </View>
@@ -624,7 +678,8 @@ const styles = StyleSheet.create({
   card1: {
     backgroundColor: "#FFFD78", // Light yellow background
     borderRadius: 30,
-    padding: 15,
+    paddingVertical: 15,
+    paddingHorizontal: 12,
     marginBottom: 15,
     height: 135,
     width: 140,
@@ -639,20 +694,37 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
     color: "#333",
-    marginLeft: 5,
+    marginLeft: 4,
+    marginRight: 6,
   },
   priceInputContainer: {
     backgroundColor: "#FFF",
     borderRadius: 10,
     marginTop: 5,
     alignItems: "center",
-    marginLeft: 15,
-    marginRight: 15,
+    marginLeft: 4,
+  },
+  priceInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginLeft: 25,
   },
   priceInput: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+  },
+  currencyUnit: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+    marginRight: 15,
   },
   timeRow: {
     flexDirection: "row",
@@ -674,6 +746,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#333",
+  },
+  timeValue: {
+    color: "#333",
+  },
+  timePlaceholder: {
+    color: "#888",
   },
   textArea: {
     backgroundColor: "#fff",
