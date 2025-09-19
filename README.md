@@ -45,5 +45,3 @@ npx expo
 npx expo start
 
 ```
-
-In react native how does global context like theme, colors, fonts, loading spinners, are developed? includes what files should be created, what are industry best practices etc.
