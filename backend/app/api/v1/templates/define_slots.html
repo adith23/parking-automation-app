@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Define Parking Slots</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
+            margin: 0;
+            padding: 10px;
+        }
+
+        #container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        #video-stream {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+        }
+
+        #controls {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            font-size: 16px;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #finish-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        #delete-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h4>Define Slots for Lot: {{ parking_lot_id }}</h4>
+    <div id="container">
+        <img id="video-stream" src="/api/v1/owner/slot-definitions/{{ parking_lot_id }}/stream" alt="Video Stream">
+        <canvas id="drawing-canvas"></canvas>
+    </div>
+    <div id="controls">
+        <button id="save-slot-btn">Save Current Slot</button>
+        <button id="reset-btn">Reset Points</button>
+        <button id="delete-btn">Delete Last Slot</button>
+        <button id="finish-btn">Finish & Save All</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video-stream');
+        const canvas = document.getElementById('drawing-canvas');
+        const ctx = canvas.getContext('2d');
+        const parkingLotId = '{{ parking_lot_id }}';
+
+        let currentPoints = [];
+        let savedPolygons = [];
+        let videoAspectRatio = 16 / 9; // Default aspect ratio
+
+        function resizeCanvas() {
+            const videoWidth = video.clientWidth;
+            videoAspectRatio = video.naturalWidth / video.naturalHeight;
+            canvas.width = videoWidth;
+            canvas.height = videoWidth / videoAspectRatio;
+            draw();
+        }
+
+        video.onload = () => {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        };
+
+        function draw() {
+            if (!canvas.width || !canvas.height) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.lineWidth = 2;
+
+            // Draw saved polygons
+            ctx.strokeStyle = '#00ff00';
+            savedPolygons.forEach(poly => {
+                ctx.beginPath();
+                ctx.moveTo(poly[0][0], poly[0][1]);
+                poly.forEach(p => ctx.lineTo(p[0], p[1]));
+                ctx.closePath();
+                ctx.stroke();
+            });
+
+            // Draw current points and lines
+            if (currentPoints.length > 0) {
+                ctx.strokeStyle = '#ff0000';
+                ctx.fillStyle = '#ff0000';
+                ctx.beginPath();
+                ctx.moveTo(currentPoints[0][0], currentPoints[0][1]);
+                currentPoints.forEach(p => ctx.lineTo(p[0], p[1]));
+                ctx.stroke();
+                currentPoints.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p[0], p[1], 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+            }
+        }
+
+        canvas.addEventListener('click', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            currentPoints.push([Math.round(x), Math.round(y)]);
+            draw();
+        });
+
+        document.getElementById('save-slot-btn').addEventListener('click', () => {
+            if (currentPoints.length > 2) {
+                savedPolygons.push([...currentPoints]);
+                currentPoints = [];
+                draw();
+            } else {
+                alert('Need at least 3 points to define a slot.');
+            }
+        });
+
+        document.getElementById('reset-btn').addEventListener('click', () => { currentPoints = []; draw(); });
+        document.getElementById('delete-btn').addEventListener('click', () => { if (savedPolygons.length > 0) { savedPolygons.pop(); draw(); } });
+        document.getElementById('finish-btn').addEventListener('click', async () => {
+            if (savedPolygons.length === 0) {
+                alert('No slots have been saved.');
+                return;
+            }
+
+            // The backend expects coordinates relative to the original video dimensions, not the scaled view.
+            const scaleX = video.naturalWidth / canvas.width;
+            const scaleY = video.naturalHeight / canvas.height;
+
+            const scaledPolygons = savedPolygons.map(poly =>
+                poly.map(p => [Math.round(p[0] * scaleX), Math.round(p[1] * scaleY)])
+            );
+
+            const payload = { slots: scaledPolygons.map(poly => ({ "coordinates": poly })) };
+
+            try {
+                const backendUrl = "http://192.168.43.151:8000";
+                const response = await fetch(`${backendUrl}/api/v1/owner/slot-definitions/${parkingLotId}/slots`,{
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const result = await response.json();
+                alert(response.ok ? result.message : `Error: ${result.detail}`);
+            } catch (error) {
+                alert('An error occurred while saving the slots.');
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,14 +1,13 @@
 from fastapi import Depends, HTTPException, status  
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from ..database import get_db
+from ..core.database import get_db
 from ..core.jwt import verify_token
-from ..models.owner.owner import ParkingLotOwner
-from ..models.driver.driver import Driver
+from ..models.owner_models.owner_model import ParkingLotOwner
+from ..models.driver_models.driver_model import Driver
 
 owner_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/owner/login/")
 driver_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/driver/login/")
-
 
 def get_current_owner(
     token: str = Depends(owner_oauth2_scheme),

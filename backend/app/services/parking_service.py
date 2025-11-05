@@ -2,18 +2,19 @@ from typing import List, Optional, Dict, Any, cast
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from fastapi import HTTPException, status
-from datetime import time
+from datetime import time, datetime
 from geoalchemy2.elements import WKTElement
 from geoalchemy2.shape import to_shape
 from shapely.geometry import Point
+import math
 
-from app.models.owner import manageparking as parking_model
-from app.models.owner.owner import ParkingLotOwner
-from app.schemas.owner.manageparking import (
+from app.models.owner_models import parking_lot_model as parking_model
+from app.models.owner_models.owner_model import ParkingLotOwner
+from app.schemas.owner_schemas.parking_lot_schema import (
     ParkingLotCreate,
     ParkingLotResponse,
     ParkingLotUpdate,
-    GpsCoordinates
+    GpsCoordinates,
 )
 
 class ParkingService:
@@ -25,13 +26,13 @@ class ParkingService:
         if parking_lot_data.get("total_slots", 0) <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Total slots must be greater than 0"
+                detail="Total slots must be greater than 0",
             )
 
         if parking_lot_data.get("price_per_hour", 0) <= 0:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Price per hour must be greater than 0"
+                detail="Price per hour must be greater than 0",
             )
 
         # Validate time format
@@ -42,24 +43,41 @@ class ParkingService:
                 time.fromisoformat(str(parking_lot_data["close_time"]))
         except ValueError:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid time format"
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid time format"
             )
 
-    def process_gps_coordinates(self, coords: Optional[Dict[str, float]]) -> Optional[WKTElement]:
+    def process_gps_coordinates(
+        self, coords: Optional[Dict[str, float]]
+    ) -> Optional[WKTElement]:
         """Process GPS coordinates and convert to WKT format for GeoAlchemy2"""
         if not coords:
             return None
-        
+
         # Convert to WKT format for GeoAlchemy2
         wkt_point = f"POINT({coords['longitude']} {coords['latitude']})"
         return WKTElement(wkt_point, srid=4326)
 
+    def _extract_gps_coordinates(self, gps_coordinates) -> Optional[Dict[str, float]]:
+        """Extract GPS coordinates from WKBElement or return None."""
+        if gps_coordinates is None:
+            return None
+        try:
+            point: Point = to_shape(gps_coordinates)
+            return {"latitude": point.y, "longitude": point.x}
+        except Exception:
+            return None
+
+    def format_time_minutes(self, minutes: int) -> str:
+        """Format minutes into a human-readable time string."""
+        if minutes < 1:
+            return "< 1 min"
+        elif minutes == 1:
+            return "1 min"
+        else:
+            return f"{minutes} mins"
+
     def create_parking_lot(
-        self,
-        owner_id: int,
-        parking_lot_data: dict,
-        db: Session
+        self, owner_id: int, parking_lot_data: dict, db: Session
     ) -> parking_model.ParkingLot:
         """
         Create a new parking lot owned by the specified owner.
@@ -73,23 +91,16 @@ class ParkingService:
             parking_lot_data["gps_coordinates"] = self.process_gps_coordinates(coords)
 
         # Create the parking lot
-        db_parking_lot = parking_model.ParkingLot(
-            **parking_lot_data,
-            owner_id=owner_id
-        )
-        
+        db_parking_lot = parking_model.ParkingLot(**parking_lot_data, owner_id=owner_id)
+
         db.add(db_parking_lot)
         db.commit()
         db.refresh(db_parking_lot)
-        
+
         return db_parking_lot
 
     def get_owner_parking_lots(
-        self,
-        owner_id: int,
-        db: Session,
-        skip: int = 0,
-        limit: int = 100
+        self, owner_id: int, db: Session, skip: int = 0, limit: int = 100
     ) -> List[parking_model.ParkingLot]:
         """
         Retrieve all parking lots owned by the specified owner.
@@ -104,10 +115,7 @@ class ParkingService:
         return parking_lots
 
     def get_parking_lot(
-        self,
-        parking_lot_id: int,
-        owner_id: int,
-        db: Session
+        self, parking_lot_id: int, owner_id: int, db: Session
     ) -> parking_model.ParkingLot:
         """
         Retrieve a specific parking lot by its ID, ensuring owner authorization.
@@ -117,27 +125,22 @@ class ParkingService:
             .filter(parking_model.ParkingLot.id == parking_lot_id)
             .first()
         )
-        
+
         if not parking_lot:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Parking lot not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Parking lot not found"
             )
-        
+
         if cast(int, parking_lot.owner_id != owner_id) != owner_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not authorized to access this parking lot"
+                detail="Not authorized to access this parking lot",
             )
-        
+
         return parking_lot
 
     def update_parking_lot(
-        self,
-        parking_lot_id: int,
-        owner_id: int,
-        updates: dict,
-        db: Session
+        self, parking_lot_id: int, owner_id: int, updates: dict, db: Session
     ) -> parking_model.ParkingLot:
         """
         Update a parking lot's details, ensuring owner authorization.
@@ -147,7 +150,9 @@ class ParkingService:
 
         # Process GPS coordinates if provided
         if "gps_coordinates" in updates:
-            updates["gps_coordinates"] = self.process_gps_coordinates(updates["gps_coordinates"])
+            updates["gps_coordinates"] = self.process_gps_coordinates(
+                updates["gps_coordinates"]
+            )
 
         # Validate if updating with new data
         if updates:
@@ -161,8 +166,10 @@ class ParkingService:
         db.add(db_parking_lot)
         db.commit()
         db.refresh(db_parking_lot)
-        
+
         return db_parking_lot
+
+
 '''
     def delete_parking_lot(
         self,
@@ -178,21 +185,6 @@ class ParkingService:
         
         db.delete(db_parking_lot)
         db.commit()
-
-    def search_parking(
-        self,
-        lat: float,
-        lon: float,
-        radius_m: float = 5000,
-        db: Session = None
-    ) -> List[Dict[str, Any]]:
-        """
-        Search for parking lots within a specified radius.
-        This is a placeholder for the geospatial search functionality.
-        """
-        # TODO: Implement PostGIS distance search
-        # For now, return empty list - implement when you add PostGIS extensions
-        return []
 
     def get_lot_stats(
         self,
@@ -284,22 +276,5 @@ class ParkingService:
         # TODO: Implement when you have the lot data
         # This would check current time against open_time and close_time
         return True
-
-    def distance_to_lot(
-        self,
-        lat: float,
-        lon: float,
-        lot_id: int,
-        db: Session
-    ) -> float:
-        """
-        Calculate distance from a point to a parking lot.
-        This is a placeholder for PostGIS implementation.
-        """
-        # TODO: Implement PostGIS distance calculation
-        # For now, return a placeholder value
-        return 0.0
 '''
-
-# Create a singleton instance
 parking_service = ParkingService()

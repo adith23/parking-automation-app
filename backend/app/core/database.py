@@ -3,10 +3,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker  
 import os
 
+from .config import settings
+
 # Database connection:
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql://postgres:pass1234@localhost:5432/ParkingSystem"
-)
+DATABASE_URL = settings.DATABASE_URL
 
 engine = create_engine(DATABASE_URL, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

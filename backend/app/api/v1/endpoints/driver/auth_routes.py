@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 from .....core.auth import hash_password, verify_password
 from .....core.jwt import create_access_token
-from .....models.driver.driver import Driver
-from .....schemas.driver.driver import DriverCreate, DriverLogin, DriverResponse
-from .....database import get_db
+from .....models.driver_models.driver_model import Driver
+from .....schemas.driver_schemas.driver_schema import DriverCreate, DriverLogin, DriverResponse
+from .....core.database import get_db
 from .....core.deps import get_current_driver
 
 router = APIRouter()
-
 
 @router.post("/register/", response_model=DriverResponse)
 def register(driver: DriverCreate, db: Session = Depends(get_db)):

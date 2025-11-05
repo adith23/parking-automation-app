@@ -3,16 +3,16 @@ from typing import Optional
 from datetime import datetime
 
 
-# For creating a new driver (registration)
-class DriverCreate(BaseModel):
+# For creating a new owner (registration)
+class OwnerCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
     phone_number: Optional[str] = None
 
 
-# For reading driver info (response)
-class DriverResponse(BaseModel):
+# For reading owner info (response)
+class OwnerResponse(BaseModel):
     id: int
     name: str
     email: EmailStr
@@ -20,10 +20,10 @@ class DriverResponse(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # For login
-class DriverLogin(BaseModel):
+class OwnerLogin(BaseModel):
     email: EmailStr
     password: str

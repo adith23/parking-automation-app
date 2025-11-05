@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
-from ...database import Base
+from ...core.database import Base
 
 class ParkingLotOwner(Base):
     __tablename__ = "parking_lot_owners"

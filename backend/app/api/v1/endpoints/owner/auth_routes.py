@@ -2,15 +2,14 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from .....models.owner.owner import ParkingLotOwner
-from .....schemas.owner.owner import OwnerCreate, OwnerLogin, OwnerResponse
-from .....database import get_db
+from .....models.owner_models.owner_model import ParkingLotOwner as ParkingLotOwner
+from .....schemas.owner_schemas.owner_schema import OwnerCreate, OwnerLogin, OwnerResponse
+from .....core.database import get_db
 from .....core.auth import hash_password, verify_password
 from .....core.jwt import create_access_token
 from .....core.deps import get_current_owner
 
 router = APIRouter()
-
 
 @router.post("/register/", response_model=OwnerResponse)
 def register_owner(owner: OwnerCreate, db: Session = Depends(get_db)):

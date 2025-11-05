@@ -2,12 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from app.schemas.owner.manageparking import (
+from app.schemas.owner_schemas.parking_lot_schema import (
     ParkingLotCreate,
-    ParkingLotResponse,
+    ParkingLotResponse, 
     ParkingLotUpdate,
 )
-from app.models.owner.owner import ParkingLotOwner
+from app.models.owner_models.owner_model import ParkingLotOwner
 from app.core.deps import get_db, get_current_owner
 from app.services.parking_service import parking_service
 
@@ -30,16 +30,12 @@ def create_parking_lot(
     Create a new parking lot owned by the current user.
     """
     return parking_service.create_parking_lot(
-        owner_id=current_owner.id,
-        parking_lot_data=parking_lot_in.dict(),
-        db=db
+        owner_id=current_owner.id, parking_lot_data=parking_lot_in.dict(), db=db
     )
 
 
 @router.get(
-    "/", 
-    response_model=List[ParkingLotResponse], 
-    summary="List owner's parking lots"
+    "/", response_model=List[ParkingLotResponse], summary="List owner's parking lots"
 )
 def get_owner_parking_lots(
     *,
@@ -52,10 +48,7 @@ def get_owner_parking_lots(
     Retrieve all parking lots owned by the current user.
     """
     return parking_service.get_owner_parking_lots(
-        owner_id=current_owner.id,
-        db=db,
-        skip=skip,
-        limit=limit
+        owner_id=current_owner.id, db=db, skip=skip, limit=limit
     )
 
 
@@ -74,9 +67,7 @@ def get_parking_lot(
     Retrieve a specific parking lot by its ID.
     """
     return parking_service.get_parking_lot(
-        parking_lot_id=parking_lot_id,
-        owner_id=current_owner.id,
-        db=db
+        parking_lot_id=parking_lot_id, owner_id=current_owner.id, db=db
     )
 
 
@@ -99,8 +90,9 @@ def update_parking_lot(
         parking_lot_id=parking_lot_id,
         owner_id=current_owner.id,
         updates=parking_lot_in.dict(exclude_unset=True),
-        db=db
+        db=db,
     )
+
 
 '''
 @router.delete(

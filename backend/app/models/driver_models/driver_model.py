@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from ...database import Base
+from ...core.database import Base
 
 
 class Driver(Base):
@@ -15,6 +15,6 @@ class Driver(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Example relationships (uncomment and adjust as you add related models)
-    # vehicles = relationship("Vehicle", back_populates="driver")
-    # bookings = relationship("Booking", back_populates="driver")
+    vehicles = relationship("Vehicle", back_populates="driver")
+    bookings = relationship("Booking", back_populates="driver")
     # subscriptions = relationship("DriverSubscription", back_populates="driver")

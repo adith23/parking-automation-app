@@ -7,7 +7,9 @@ python-jose[cryptography]
 psycopg2-binary
 python-dotenv
 shapely
-
-
+ultralytics
+opencv-python
+pydantic-settings
+redis
 
 

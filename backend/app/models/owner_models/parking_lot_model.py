@@ -1,8 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, Time, JSON, ForeignKey
 from sqlalchemy.orm import relationship
-from app.database import Base
+from app.core.database import Base
 from geoalchemy2 import Geography
-
+from .parking_slot_model import ParkingSlot 
 
 class ParkingLot(Base):
     __tablename__ = "parking_lots"
@@ -40,3 +40,4 @@ class ParkingLot(Base):
 
     owner_id = Column(Integer, ForeignKey("parking_lot_owners.id"), nullable=False)
     owner = relationship("ParkingLotOwner", back_populates="parking_lots")
+    slots = relationship("ParkingSlot", back_populates="parking_lot", cascade="all, delete-orphan")

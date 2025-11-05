@@ -5,19 +5,7 @@ from geoalchemy2.elements import WKBElement
 from shapely import wkb
 from shapely.geometry import Point
 from geoalchemy2.shape import to_shape
-
-
-# Nested model for additional information
-class AdditionalInfo(BaseModel):
-    suitable_vehicle_types: Optional[List[str]] = None
-    rules_and_regulations: Optional[str] = None
-    security_and_safety: Optional[str] = None
-
-
-# Nested model for media URLs
-class MediaURLs(BaseModel):
-    photos: Optional[List[str]] = None
-    videos: Optional[List[str]] = None
+from .parking_slot_schema import ParkingSlot
 
 
 class GpsCoordinates(BaseModel):
@@ -35,6 +23,19 @@ class GpsCoordinates(BaseModel):
         if not -180 <= v <= 180:
             raise ValueError("Longitude must be between -180 and 180")
         return v
+
+
+# Nested model for additional information
+class AdditionalInfo(BaseModel):
+    suitable_vehicle_types: Optional[List[str]] = None
+    rules_and_regulations: Optional[str] = None
+    security_and_safety: Optional[str] = None
+
+
+# Nested model for media URLs
+class MediaURLs(BaseModel):
+    photos: Optional[List[str]] = None
+    videos: Optional[List[str]] = None
 
 
 # Base model for common parking lot attributes
@@ -72,9 +73,19 @@ class ParkingLotUpdate(BaseModel):
 class ParkingLotResponse(ParkingLotBase):
     id: int
     owner_id: int
+    # Calculated fields (optional, only present when requested)
+    distance_meters: Optional[float] = None
+    walking_time_minutes: Optional[int] = None
+    status: Optional[str] = None  # "open", "closed", "opening_soon"
+    status_message: Optional[str] = None
+    status_color: Optional[str] = None
+    available_slots: Optional[int] = None
+    occupied_slots: Optional[int] = None
+    reserved_slots: Optional[int] = None
+    slots: List[ParkingSlot] = []
 
     class Config:
-        from_attributes  = True
+        from_attributes = True
 
     @validator("gps_coordinates", pre=True, allow_reuse=True)
     def transform_wkb_to_dict(cls, v):
@@ -86,4 +97,3 @@ class ParkingLotResponse(ParkingLotBase):
             return {"latitude": point.y, "longitude": point.x}
         except Exception as e:
             raise ValueError(f"Invalid geometry: {e}")
-
