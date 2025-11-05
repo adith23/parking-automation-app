@@ -22,7 +22,6 @@ import { useAuth } from "../../context/AuthContext";
 export default function LoginScreen() {
   const router = useRouter();
   const { login, authLoading, user } = useAuth();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +29,7 @@ export default function LoginScreen() {
   // If already logged in, redirect to main app
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/home");
     }
   }, [authLoading, user, router]);
 

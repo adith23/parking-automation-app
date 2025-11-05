@@ -5,78 +5,17 @@ import {
   View,
   SafeAreaView,
   FlatList,
-  Switch,
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
   Alert,
 } from "react-native";
-import Icon from "react-native-vector-icons/FontAwesome5";
 import Manage from "../../assets/images/oui_nav-manage.svg";
-import Edit from "../../assets/images/edit.svg";
-
-
+import Lots from "../../assets/icons/Lots.svg";
+import Subs from "../../assets/icons/Subs.svg";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import api from "../../services/api";
-
-const ParkingLotCard = ({ item, onValueChange }) => {
-  // We'll add a placeholder for status, as it's not in the DB model yet
-  const isEnabled = item.isEnabled ?? true; // Default to true if not present
-  const status = isEnabled ? "Open Now" : "Closed Now";
-  const isOpen = status === "Open Now";
-
-  return (
-    <View style={styles.card}>
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle}>{item.name}</Text>
-        <View style={styles.cardDetails}>
-          <Text style={styles.detailText}>{item.total_slots} Slots</Text>
-          <Text style={styles.detailText}> | </Text>
-          <Text style={styles.detailText}>${item.price_per_hour}/hr</Text>
-          <Text style={styles.detailText}> | </Text>
-          <Text
-            style={[
-              styles.statusText,
-              { color: isOpen ? "#1ada47ff" : "#dc3545" },
-            ]}
-          >
-            {status}
-          </Text>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isOpen ? "#1ada47ff" : "#dc3545" },
-            ]}
-          />
-        </View>
-      </View>
-      <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.editButton}>
-          <Edit name="pencil-alt" size={20} color="#333" />
-        </TouchableOpacity>
-        <View
-          style={[
-            styles.switchContainer,
-            {
-              backgroundColor: item.isEnabled ? "#FFFC35" : "#ffffffff",
-              borderWidth: 1.5,
-              borderColor: "#000",
-            },
-          ]}
-        >
-          <Switch
-            trackColor={{ false: "#ffffffff", true: "#FFFC35" }}
-            thumbColor="#000000ff"
-            ios_backgroundColor="#ffffffff"
-            onValueChange={onValueChange}
-            value={item.isEnabled}
-            style={styles.switch}
-          />
-        </View>
-      </View>
-    </View>
-  );
-};
+import ParkingLotCard from "../../components/ParkingLotCard";
 
 const ManageLotsScreen = () => {
   const navigation = useNavigation(); // Hook to navigate between screens
@@ -158,6 +97,21 @@ const ManageLotsScreen = () => {
         <Manage name="sliders-h" size={24} color="#FFFC35" />
         <Text style={styles.headerTitle}>Add or Manage Parking Lots</Text>
       </View>
+
+      <View style={styles.container}>
+        {/* Button 1: Add Parking Lots */}
+        <TouchableOpacity style={styles.button1} onPress={() => navigation.navigate("addparkinglot")}>
+          <Lots name="flag-plus" size={22} color="#000" />
+          <Text style={styles.buttonText}>Add Parking Lots</Text>
+        </TouchableOpacity>
+
+        {/* Button 2: Manage Subscriptions */}
+        <TouchableOpacity style={styles.button2}>
+          <Subs name="sync-alt" size={20} color="#000" />
+          <Text style={styles.buttonText}>Manage Subscriptions</Text>
+        </TouchableOpacity>
+      </View>
+      
       {/* List of Parking Lots */}
       <FlatList
         data={parkingLots}
@@ -177,14 +131,6 @@ const ManageLotsScreen = () => {
           </View>
         }
       />
-
-      {/* FAB now navigates to the AddParkingLotScreen */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate("addparkinglot")} // Navigate on press
-      >
-        <Icon name="plus" size={28} color="#000" />
-      </TouchableOpacity>
     </SafeAreaView>
   );
 };
@@ -214,86 +160,6 @@ const styles = StyleSheet.create({
     padding: 18,
     flexGrow: 1,
   },
-  card: {
-    backgroundColor: "#FFFD78", // Light yellow
-    borderRadius: 30,
-    paddingLeft: 25,
-    paddingRight: 16,
-    paddingTop: 16,
-    paddingBottom: 18,
-    marginBottom: 20,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#000000ff",
-    marginBottom: 5,
-    marginTop: -25,
-  },
-  cardDetails: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  detailText: {
-    fontSize: 15,
-    color: "#666",
-    fontWeight: "bold",
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 6,
-    marginLeft: 6,
-    marginTop: 3,
-  },
-  cardActions: {
-    flexDirection: "column",
-    alignItems: "center", // vertical alignment
-    justifyContent: "flex-end", // push content to the right
-    gap: 8,
-  },
-  editButton: {
-    marginTop: 10,
-  },
-  switchContainer: {
-    width: 60,
-    height: 35,
-    borderRadius: 20,
-    overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  switch: {
-    transform: [{ scaleX: 1.3 }, { scaleY: 1.3 }], // makes switch slightly bigger
-  },
-  fab: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#FFFC35",
-    alignItems: "center",
-    justifyContent: "center",
-    right: 25,
-    bottom: 40, // Position above the nav bar
-    elevation: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
@@ -311,6 +177,51 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 10,
+  },
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 28,
+    marginBottom: 15,
+  },
+  button1: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFE0', // Light yellow
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  button2: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFE0', // Light yellow
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  buttonText: {
+    marginLeft: 5,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
   },
 });
 

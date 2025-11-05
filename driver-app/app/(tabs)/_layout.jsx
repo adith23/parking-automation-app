@@ -1,27 +1,20 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Tabs } from "expo-router";
+import { Tabs, Redirect } from "expo-router";
+import { useAuth } from "../../context/AuthContext";
+import BottomTabBar from "../../components/BottomTabBar";
 
 export default function TabLayout() {
+  const { user, authLoading } = useAuth();
+
+  if (authLoading) return null;
+  if (!user) return <Redirect href="/(auth)/login" />;
+
   return (
-    <Tabs screenOptions={{ tabBarActiveTintColor: "blue" }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="home" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
-          ),
-        }}
-      />
+    <Tabs
+      screenOptions={{ headerShown: false, tabBarActiveTintColor: "yellow" }}
+      tabBar={(props) => <BottomTabBar {...props} />}
+    >
+      <Tabs.Screen name="home" options={{ title: "Home" }} />
+      <Tabs.Screen name="settings" options={{ title: "Settings" }} />
     </Tabs>
   );
 }

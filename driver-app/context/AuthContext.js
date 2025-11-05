@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import authService from "../services/authService";
+import { DeviceEventEmitter } from "react-native";
 
 const AuthContext = createContext();
 
@@ -8,13 +9,26 @@ export const AuthProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // On app start, check if user is logged in
     const loadUser = async () => {
+      const token = await authService.getToken();
       const storedUser = await authService.getUser();
-      setUser(storedUser);
+
+      if (!token) {
+        setUser(null);
+      } else {
+        setUser(storedUser);
+      }
       setAuthLoading(false);
     };
     loadUser();
+  }, []);
+
+  useEffect(() => {
+    const subscription = DeviceEventEmitter.addListener("logout", async () => {
+      await logout();
+    });
+
+    return () => subscription.remove(); // cleanup on unmount
   }, []);
 
   const register = async (userData) => {
