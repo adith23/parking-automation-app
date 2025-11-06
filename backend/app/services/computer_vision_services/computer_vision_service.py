@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.redis import get_redis
 from app.models.owner_models.parking_slot_model import ParkingSlot
+from app.services.session_service import session_service
 
 # --- Configuration and Model Paths ---
 VEHICLE_MODEL_PATH = "yolo11n.pt"
@@ -77,6 +78,8 @@ class ComputerVisionService:
 
         self.mutable_statuses = {"available", "occupied"}
         self.best_vehicle_plates = {}
+        # Track which license plate is in which slot: {slot_id: license_plate}
+        self.slot_license_plates: Dict[int, str] = {}
 
     def process_frame(self, frame):
         """
@@ -93,7 +96,7 @@ class ComputerVisionService:
 
         # 1. Track Vehicles
         vehicle_results = self.vehicle_model.track(
-            frame, persist=True, tracker="bytetrack.yaml", verbose= False
+            frame, persist=True, tracker="bytetrack.yaml", verbose=False
         )
         tracked_vehicles = []
         if (
@@ -134,6 +137,8 @@ class ComputerVisionService:
                                 }
                     break
 
+        # In computer_vision_service.py, modify the occupancy detection section:
+
         # 4. Occupancy and Drawing Logic
         for state in self.slots.values():
             slot_id = state["slot_id"]
@@ -143,15 +148,41 @@ class ComputerVisionService:
                 current_status = state["last_published_status"]
             else:
                 occupied = False
+                detected_license_plate = None
+                track_id_in_slot = None
+
+                # Check which vehicles are in this slot and get their license plates
+                # DON'T break early - check all vehicles to find the best license plate
                 for vehicle in tracked_vehicles:
-                    vx1, vy1, vx2, vy2 = vehicle[:4]
+                    vx1, vy1, vx2, vy2, track_id = map(int, vehicle[:5])
                     center_x, center_y = (vx1 + vx2) / 2, (vy1 + vy2) / 2
                     if (
                         cv2.pointPolygonTest(flat_polygon, (center_x, center_y), False)
                         >= 0
                     ):
                         occupied = True
-                        break
+                        track_id_in_slot = track_id
+                        # Get license plate for this vehicle if available
+                        if track_id in self.best_vehicle_plates:
+                            plate_info = self.best_vehicle_plates[track_id]
+                            # Use the one with highest confidence if multiple detected
+                            if not detected_license_plate or plate_info[
+                                "confidence"
+                            ] > detected_license_plate.get("confidence", 0):
+                                detected_license_plate = plate_info["text"]
+                                # Store license plate for this slot
+                                self.slot_license_plates[slot_id] = (
+                                    detected_license_plate
+                                )
+                        # DON'T break - continue checking all vehicles
+
+                # If slot is already occupied, check for license plate in stored dict
+                if (
+                    occupied
+                    and not detected_license_plate
+                    and slot_id in self.slot_license_plates
+                ):
+                    detected_license_plate = self.slot_license_plates[slot_id]
 
                 if occupied:
                     state["occupied_count"] += 1
@@ -161,9 +192,46 @@ class ComputerVisionService:
                         and state["occupied_count"] >= OCCUPIED_FRAME_THRESHOLD
                     ):
                         state["status"] = "occupied"
+                        # If transitioning to occupied and we have a license plate, try to detect arrival
+                        if detected_license_plate:
+                            try:
+                                session_service.detect_license_plate_arrival(
+                                    detected_license_plate,
+                                    slot_id,
+                                    datetime.now(timezone.utc),
+                                )
+                            except Exception as e:
+                                logger.error(
+                                    f"Error detecting license plate arrival: {e}"
+                                )
+                                print(f"Error detecting license plate arrival: {e}")
+                    # IMPORTANT: Also check if slot is already occupied but we just detected license plate
+                    elif state["status"] == "occupied" and detected_license_plate:
+                        # Check if session already exists for this slot
+                        try:
+                            existing_session = (
+                                session_service.get_active_session_by_slot(slot_id)
+                            )
+                            if not existing_session:
+                                # Try to create session now that we have license plate
+                                session_service.detect_license_plate_arrival(
+                                    detected_license_plate,
+                                    slot_id,
+                                    datetime.now(timezone.utc),
+                                )
+                        except Exception as e:
+                            logger.error(
+                                f"Error creating session for already-occupied slot: {e}"
+                            )
+                            print(
+                                f"Error creating session for already-occupied slot: {e}"
+                            )
                 else:
                     state["empty_count"] += 1
                     state["occupied_count"] = 0
+                    # Clear license plate when slot becomes empty
+                    if slot_id in self.slot_license_plates:
+                        del self.slot_license_plates[slot_id]
                     if (
                         state["status"] != "available"
                         and state["empty_count"] >= EMPTY_FRAME_THRESHOLD
@@ -173,7 +241,11 @@ class ComputerVisionService:
                 current_status = state["status"]
 
                 if current_status != state["last_published_status"]:
-                    self._handle_status_change(state, current_status)
+                    # Get license plate for this slot if available (from stored dict or current detection)
+                    license_plate = (
+                        self.slot_license_plates.get(slot_id) or detected_license_plate
+                    )
+                    self._handle_status_change(state, current_status, license_plate)
                     state["last_published_status"] = current_status
 
             color = self._status_color(current_status)
@@ -221,11 +293,16 @@ class ComputerVisionService:
 
         return annotated_frame
 
-    def _handle_status_change(self, state: Dict[str, Any], new_status: str) -> None:
+    def _handle_status_change(
+        self, state: Dict[str, Any], new_status: str, license_plate: str = None
+    ) -> None:
         observed_at = datetime.now(timezone.utc)
+        slot_id = state["slot_id"]
+        old_status = state["last_published_status"]
+
         db: Session = SessionLocal()
         try:
-            db.query(ParkingSlot).filter(ParkingSlot.id == state["slot_id"]).update(
+            db.query(ParkingSlot).filter(ParkingSlot.id == slot_id).update(
                 {"status": new_status, "last_updated_at": observed_at},
                 synchronize_session=False,
             )
@@ -235,8 +312,16 @@ class ComputerVisionService:
         finally:
             db.close()
 
+        # Integrate with session service to handle slot status changes
+        try:
+            session_service.handle_slot_status_change(
+                slot_id, old_status, new_status, license_plate
+            )
+        except Exception as e:
+            print(f"Error handling slot status change in session service: {e}")
+
         payload = {
-            "slot_id": state["slot_id"],
+            "slot_id": slot_id,
             "parking_lot_id": state["parking_lot_id"],
             "status": new_status,
             "observed_at": observed_at.isoformat(),

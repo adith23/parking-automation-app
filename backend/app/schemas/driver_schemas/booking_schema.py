@@ -11,13 +11,13 @@ class BookingStatus(str, Enum):
     CANCELED = "canceled"
 
 class BookingCreate(BaseModel):
-    vehicle_id: int
+    license_plate: str
     parking_slot_id: int
 
-    @validator("vehicle_id")
-    def validate_vehicle_id(cls, v):
-        if v <= 0:
-            raise ValueError("Vehicle ID must be greater than 0")
+    @validator("license_plate")
+    def validate_license_plate(cls, v):
+        if len(v) != 3:
+            raise ValueError("License plate must be 83 characters long")
         return v
 
     @validator("parking_slot_id")
@@ -29,8 +29,9 @@ class BookingCreate(BaseModel):
 class BookingResponse(BaseModel):
     id: int
     driver_id: int
-    vehicle_id: int
+    license_plate: str
     parking_slot_id: int
+    parking_lot_id: int
     status: BookingStatus
     booked_at: datetime
     expires_at: Optional[datetime] = None

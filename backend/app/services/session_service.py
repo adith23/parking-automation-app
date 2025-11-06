@@ -58,9 +58,7 @@ def fuzzy_match_license_plate(detected_plate: str, db: Session) -> Optional[Vehi
 
     # First try exact match
     vehicle = (
-        db.query(Vehicle)
-        .filter(Vehicle.license_plate == normalized_detected)
-        .first()
+        db.query(Vehicle).filter(Vehicle.license_plate == normalized_detected).first()
     )
 
     if vehicle:
@@ -92,17 +90,25 @@ class SessionService:
         Check if license plate has active booking and create session if confirmed booking exists.
         Also creates walk-in session if vehicle exists but no booking.
         """
+        logger.info(
+            f"Attempting to detect arrival for license plate: {license_plate} in slot {slot_id}"
+        )
+
         db: Session = SessionLocal()
         try:
             # Normalize and find vehicle
             vehicle = fuzzy_match_license_plate(license_plate, db)
 
             if not vehicle:
-                logger.debug(f"No vehicle found for license plate: {license_plate}")
+                logger.warning(
+                    f"No vehicle found for license plate: {license_plate} (normalized: {normalize_license_plate(license_plate)})"
+                )
                 return None
 
             # Get parking slot to get parking_lot_id
-            parking_slot = db.query(ParkingSlot).filter(ParkingSlot.id == slot_id).first()
+            parking_slot = (
+                db.query(ParkingSlot).filter(ParkingSlot.id == slot_id).first()
+            )
             if not parking_slot:
                 logger.error(f"Parking slot {slot_id} not found")
                 return None
@@ -125,12 +131,13 @@ class SessionService:
                 )
                 return existing_session
 
-            # Check for CONFIRMED booking matching vehicle_id and slot_id
+            # Check for CONFIRMED booking matching license_plate and slot_id
+            normalized_plate = normalize_license_plate(license_plate)
             booking = (
                 db.query(Booking)
                 .filter(
                     and_(
-                        Booking.vehicle_id == vehicle.id,
+                        Booking.license_plate == normalized_plate,
                         Booking.parking_slot_id == slot_id,
                         Booking.status == BookingStatus.CONFIRMED,
                     )
@@ -267,9 +274,7 @@ class SessionService:
 
         try:
             session = (
-                db.query(ParkingSession)
-                .filter(ParkingSession.id == session_id)
-                .first()
+                db.query(ParkingSession).filter(ParkingSession.id == session_id).first()
             )
 
             if not session:
@@ -341,9 +346,7 @@ class SessionService:
 
         try:
             session = (
-                db.query(ParkingSession)
-                .filter(ParkingSession.id == session_id)
-                .first()
+                db.query(ParkingSession).filter(ParkingSession.id == session_id).first()
             )
 
             if not session:
@@ -425,7 +428,9 @@ class SessionService:
         self, session_id: int, driver_id: int, db: Session
     ) -> ParkingSession:
         """Get a specific parking session by ID, verifying driver ownership."""
-        session = db.query(ParkingSession).filter(ParkingSession.id == session_id).first()
+        session = (
+            db.query(ParkingSession).filter(ParkingSession.id == session_id).first()
+        )
 
         if not session:
             raise HTTPException(

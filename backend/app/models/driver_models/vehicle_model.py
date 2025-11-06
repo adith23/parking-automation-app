@@ -17,5 +17,4 @@ class Vehicle(Base):
 
     # Relationships
     driver = relationship("Driver", back_populates="vehicles")
-    bookings = relationship("Booking", back_populates="vehicle")
     parking_sessions = relationship("ParkingSession", back_populates="vehicle")

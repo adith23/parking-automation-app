@@ -12,6 +12,7 @@ from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.models.owner_models.parking_lot_model import ParkingLot
 from app.core.redis import get_redis
 from app.schemas.driver_schemas.booking_schema import BookingCreate, BookingConfirm
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -62,24 +63,39 @@ class BookingService:
         except Exception as e:
             logger.error(f"Error releasing lock for slot {slot_id}: {e}")
 
+    def _normalize_license_plate(self, plate: str) -> str:
+        """Normalize license plate: uppercase, remove spaces and special characters."""
+        if not plate:
+            return ""
+        normalized = re.sub(r"[^A-Z0-9]", "", plate.upper())
+        return normalized
+
     def _validate_booking_request(
-        self, driver_id: int, vehicle_id: int, parking_slot_id: int, db: Session
-    ) -> tuple[ParkingSlot, Vehicle]:
+        self, driver_id: int, license_plate: str, parking_slot_id: int, db: Session
+    ) -> tuple[ParkingSlot, Vehicle, ParkingLot]:
         """
         Validate booking request transactionally.
-        Returns (parking_slot, vehicle) if valid, raises HTTPException otherwise.
+        Returns (parking_slot, vehicle, parking_lot) if valid, raises HTTPException otherwise.
         """
+        # Normalize license plate
+        normalized_plate = self._normalize_license_plate(license_plate)
+        
         # Check if vehicle exists and belongs to driver
         vehicle = (
             db.query(Vehicle)
-            .filter(and_(Vehicle.id == vehicle_id, Vehicle.driver_id == driver_id))
+            .filter(
+                and_(
+                    Vehicle.license_plate == normalized_plate,
+                    Vehicle.driver_id == driver_id
+                )
+            )
             .first()
         )
 
         if not vehicle:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Vehicle not found or does not belong to driver",
+                detail=f"Vehicle with license plate '{license_plate}' not found or does not belong to driver",
             )
 
         # Check if parking slot exists and is available
@@ -143,7 +159,7 @@ class BookingService:
                 detail="Slot is already booked or locked by another driver",
             )
 
-        return parking_slot, vehicle
+        return parking_slot, vehicle, parking_lot
 
     def initiate_booking(
         self, driver_id: int, booking_data: BookingCreate, db: Session
@@ -152,7 +168,7 @@ class BookingService:
         Initiate a booking by acquiring a lock and creating a booking record.
         """
         parking_slot_id = booking_data.parking_slot_id
-        vehicle_id = booking_data.vehicle_id
+        license_plate = booking_data.license_plate
 
         # Step 1: Attempt to acquire lock
         if not self._acquire_lock(parking_slot_id, driver_id):
@@ -163,17 +179,19 @@ class BookingService:
 
         try:
             # Step 2: Validate availability and constraints transactionally
-            parking_slot, vehicle = self._validate_booking_request(
-                driver_id, vehicle_id, parking_slot_id, db
+            parking_slot, vehicle, parking_lot = self._validate_booking_request(
+                driver_id, license_plate, parking_slot_id, db
             )
 
             # Step 3: Create booking record in INITIATED status
             expires_at = datetime.utcnow() + timedelta(seconds=self.lock_ttl)
+            normalized_plate = self._normalize_license_plate(license_plate)
 
             booking = Booking(
                 driver_id=driver_id,
-                vehicle_id=vehicle_id,
+                license_plate=normalized_plate,
                 parking_slot_id=parking_slot_id,
+                parking_lot_id=parking_lot.id,
                 status=BookingStatus.INITIATED,
                 expires_at=expires_at,
             )

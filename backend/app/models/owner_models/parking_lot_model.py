@@ -41,3 +41,4 @@ class ParkingLot(Base):
     owner_id = Column(Integer, ForeignKey("parking_lot_owners.id"), nullable=False)
     owner = relationship("ParkingLotOwner", back_populates="parking_lots")
     slots = relationship("ParkingSlot", back_populates="parking_lot", cascade="all, delete-orphan")
+    bookings = relationship("Booking", back_populates="parking_lot")
