@@ -88,13 +88,30 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
 
     namespace 'com.easypark.ownerapp'
+
+    // Load API key from local.properties
+    def localProperties = new Properties()
+    def localPropertiesFile = rootProject.file('local.properties')
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.withReader('UTF-8') { reader ->
+            localProperties.load(reader)
+        }
+    }
+    def googleMapsApiKey = localProperties.getProperty('GOOGLE_MAPS_API_KEY', '"YOUR_API_KEY_HERE"')
+
     defaultConfig {
         applicationId 'com.easypark.ownerapp'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
+
+        // Add manifest placeholder for API key
+        manifestPlaceholders = [
+            googleMapsApiKey: googleMapsApiKey
+        ]
     }
+    
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
