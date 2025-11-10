@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
-from app.schemas.owner.subscription import (
+from app.schemas.owner_schemas.subscription_schema import (
     SubscriptionPlanCreate,
     SubscriptionPlanResponse,
     SubscriptionPlanUpdate,
@@ -11,11 +11,51 @@ from app.schemas.owner.subscription import (
     PlanStatisticsResponse,
     OwnerSubscriptionDashboardResponse,
 )
-from app.models.owner.owner import ParkingLotOwner
+from app.models.owner_models.owner_model import ParkingLotOwner
 from app.core.deps import get_db, get_current_owner
 from app.services.subscription_service import subscription_service
+from app.models.owner_models.subscription_model import PlanStatus
+from app.models.owner_models.subscription_model import (
+    PlanStatus,
+    DriverSubscription,
+    PlanType,
+)
 
 router = APIRouter()
+
+
+def build_plan_response(plan, total_subscribers: int = 0) -> SubscriptionPlanResponse:
+    """Helper function to build SubscriptionPlanResponse with lot_ids"""
+    # Get lot_ids from the many-to-many relationship
+    lot_ids = [lot.id for lot in plan.applicable_lots] if plan.applicable_lots else None
+
+    return SubscriptionPlanResponse(
+        id=plan.id,
+        owner_id=plan.owner_id,
+        name=plan.name,
+        description=plan.description,
+        plan_type=plan.plan_type,
+        monthly_price=plan.monthly_price,
+        annual_price=plan.annual_price,
+        billing_cycle=plan.billing_cycle,
+        billing_interval=plan.billing_interval,
+        max_vehicles=plan.max_vehicles,
+        reserved_slots=plan.reserved_slots,
+        features=plan.features,
+        is_featured=plan.is_featured,
+        max_subscribers=plan.max_subscribers,
+        lot_id=plan.lot_id,  # Keep for backward compatibility
+        lot_ids=lot_ids,
+        applicable_lots=plan.applicable_lots,
+        status=plan.status,
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+        effective_from=plan.effective_from,
+        effective_until=plan.effective_until,
+        total_subscribers=total_subscribers,
+        is_available=plan.status == PlanStatus.ACTIVE,
+    )
+
 
 @router.post(
     "/",
@@ -35,15 +75,20 @@ def create_subscription_plan(
 
     - **name**: Plan name (e.g., "Premium Monthly", "Basic Annual")
     - **description**: Detailed description of the plan
-    - **plan_type**: BASIC, PREMIUM, ENTERPRISE, or CUSTOM
+    - **plan_type**: BASIC
     - **monthly_price**: Base monthly price in USD
     - **annual_price**: Optional discounted annual price
-    - **billing_cycle**: MONTHLY, ANNUAL, QUARTERLY, or WEEKLY
+    - **billing_cycle**: MONTHLY or ANNUAL
     - **features**: Custom features like priority booking, reserved slots
     """
-    return subscription_service.create_subscription_plan(
+    plan = subscription_service.create_subscription_plan(
         owner_id=current_owner.id, plan_data=plan_data.dict(), db=db
     )
+
+    # Calculate total subscribers (0 for new plan)
+    total_subscribers = 0
+
+    return build_plan_response(plan, total_subscribers)
 
 
 @router.get(
@@ -75,7 +120,7 @@ def get_owner_subscription_plans(
     plan_status = None
     if status:
         try:
-            plan_status = subscription_service.PlanStatus(status)
+            plan_status = PlanStatus(status)
         except ValueError:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -96,35 +141,12 @@ def get_owner_subscription_plans(
     for plan in plans:
         # Calculate total subscribers
         total_subscribers = (
-            db.query(subscription_service.DriverSubscription)
-            .filter(subscription_service.DriverSubscription.plan_id == plan.id)
+            db.query(DriverSubscription)
+            .filter(DriverSubscription.plan_id == plan.id)
             .count()
         )
 
-        plan_response = SubscriptionPlanResponse(
-            id=plan.id,
-            owner_id=plan.owner_id,
-            name=plan.name,
-            description=plan.description,
-            plan_type=plan.plan_type,
-            monthly_price=plan.monthly_price,
-            annual_price=plan.annual_price,
-            billing_cycle=plan.billing_cycle,
-            billing_interval=plan.billing_interval,
-            max_vehicles=plan.max_vehicles,
-            reserved_slots=plan.reserved_slots,
-            features=plan.features,
-            is_featured=plan.is_featured,
-            max_subscribers=plan.max_subscribers,
-            lot_id=plan.lot_id,
-            status=plan.status,
-            created_at=plan.created_at,
-            updated_at=plan.updated_at,
-            effective_from=plan.effective_from,
-            effective_until=plan.effective_until,
-            total_subscribers=total_subscribers,
-            is_available=plan.status == subscription_service.PlanStatus.ACTIVE,
-        )
+        plan_response = build_plan_response(plan, total_subscribers)
         plan_responses.append(plan_response)
 
     return SubscriptionPlanListResponse(
@@ -155,35 +177,12 @@ def get_subscription_plan(
 
     # Calculate total subscribers
     total_subscribers = (
-        db.query(subscription_service.DriverSubscription)
-        .filter(subscription_service.DriverSubscription.plan_id == plan.id)
+        db.query(DriverSubscription)
+        .filter(DriverSubscription.plan_id == plan.id)
         .count()
     )
 
-    return SubscriptionPlanResponse(
-        id=plan.id,
-        owner_id=plan.owner_id,
-        name=plan.name,
-        description=plan.description,
-        plan_type=plan.plan_type,
-        monthly_price=plan.monthly_price,
-        annual_price=plan.annual_price,
-        billing_cycle=plan.billing_cycle,
-        billing_interval=plan.billing_interval,
-        max_vehicles=plan.max_vehicles,
-        reserved_slots=plan.reserved_slots,
-        features=plan.features,
-        is_featured=plan.is_featured,
-        max_subscribers=plan.max_subscribers,
-        lot_id=plan.lot_id,
-        status=plan.status,
-        created_at=plan.created_at,
-        updated_at=plan.updated_at,
-        effective_from=plan.effective_from,
-        effective_until=plan.effective_until,
-        total_subscribers=total_subscribers,
-        is_available=plan.status == subscription_service.PlanStatus.ACTIVE,
-    )
+    return build_plan_response(plan, total_subscribers)
 
 
 @router.put(

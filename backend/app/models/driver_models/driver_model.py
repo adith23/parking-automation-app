@@ -17,4 +17,4 @@ class Driver(Base):
     # Example relationships (uncomment and adjust as you add related models)
     vehicles = relationship("Vehicle", back_populates="driver")
     bookings = relationship("Booking", back_populates="driver")
-    # subscriptions = relationship("DriverSubscription", back_populates="driver")
+    subscriptions = relationship("DriverSubscription", back_populates="driver")

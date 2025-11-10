@@ -16,7 +16,7 @@ router = APIRouter()
 # --- Path Configuration ---
 # In a real app, you would fetch the video path from the database based on the parking_lot_id
 script_dir = os.path.dirname(__file__)
-VIDEO_PATH = r"C:\Users\Adithya\Downloads\sample_video5..mp4"
+VIDEO_PATH = r"C:\Users\Adithya\Downloads\sample_video4..mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
 # --- Video Streaming Logic ---

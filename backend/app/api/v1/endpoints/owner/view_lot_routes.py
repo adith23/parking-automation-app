@@ -21,7 +21,7 @@ def generate_processed_frames(parking_lot_id: int, db: Session):
         .first()
     )
     # Use placeholder video if not specified in DB
-    video_path = r"C:\Users\Adithya\Downloads\sample_video5..mp4"
+    video_path = r"C:\Users\Adithya\Downloads\sample_video4.mp4"
 
     if not os.path.exists(video_path):
         raise ConnectionError("Video source not found.")

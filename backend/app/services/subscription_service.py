@@ -1,11 +1,11 @@
 from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import and_, or_, func, desc
 from fastapi import HTTPException, status
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from app.models.owner.subscription import (
+from app.models.owner_models.subscription_model import (
     SubscriptionPlan,
     DriverSubscription,
     SubscriptionUsage,
@@ -13,9 +13,9 @@ from app.models.owner.subscription import (
     PlanStatus,
     PlanType,
 )
-from app.models.owner.owner import ParkingLotOwner
-from app.models.owner import manageparking as parking_model
-from app.schemas.owner.subscription import (
+from app.models.owner_models.owner_model import ParkingLotOwner
+from app.models.owner_models import parking_lot_model as parking_model
+from app.schemas.owner_schemas.subscription_schema import (
     SubscriptionPlanCreate,
     SubscriptionPlanUpdate,
     PlanStatisticsResponse,
@@ -82,25 +82,45 @@ class SubscriptionService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Owner not found"
             )
 
-        # If lot-specific plan, verify owner owns the lot
-        if plan_data.get("lot_id"):
-            lot = (
+        # Extract lot_ids (new way) or lot_id (old way for backward compatibility)
+        lot_ids = plan_data.pop("lot_ids", None)
+        lot_id = plan_data.get("lot_id")
+
+        # Handle backward compatibility: if lot_id is provided but lot_ids is not, convert it
+        if lot_id and not lot_ids:
+            lot_ids = [lot_id]
+            plan_data.pop("lot_id")  # Remove lot_id since we'll use lot_ids
+
+        # Validate that all lot_ids belong to the owner
+        if lot_ids:
+            lots = (
                 db.query(parking_model.ParkingLot)
                 .filter(
                     and_(
-                        parking_model.ParkingLot.id == plan_data["lot_id"],
+                        parking_model.ParkingLot.id.in_(lot_ids),
                         parking_model.ParkingLot.owner_id == owner_id,
                     )
                 )
-                .first()
+                .all()
             )
-            if not lot:
+
+            if len(lots) != len(lot_ids):
+                found_ids = {lot.id for lot in lots}
+                missing_ids = set(lot_ids) - found_ids
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Not authorized to create plan for this parking lot",
+                    detail=f"Not authorized to create plan for parking lot(s): {missing_ids}",
                 )
 
-        # Create the subscription plan
+        # Explicitly convert enums to their string values before creating the model
+        if "plan_type" in plan_data and isinstance(plan_data["plan_type"], PlanType):
+            plan_data["plan_type"] = plan_data["plan_type"].value
+        if "billing_cycle" in plan_data and isinstance(
+            plan_data["billing_cycle"], BillingCycle
+        ):
+            plan_data["billing_cycle"] = plan_data["billing_cycle"].value
+
+        # Create the subscription plan (without lot_ids, as it's not a column)
         db_plan = SubscriptionPlan(
             **plan_data,
             owner_id=owner_id,
@@ -110,6 +130,17 @@ class SubscriptionService:
         )
 
         db.add(db_plan)
+        db.flush()  # Flush to get the plan ID
+
+        # Associate lots with the plan if lot_ids were provided
+        if lot_ids:
+            lots = (
+                db.query(parking_model.ParkingLot)
+                .filter(parking_model.ParkingLot.id.in_(lot_ids))
+                .all()
+            )
+            db_plan.applicable_lots = lots
+
         db.commit()
         db.refresh(db_plan)
 
@@ -125,10 +156,14 @@ class SubscriptionService:
         lot_id: Optional[int] = None,
     ) -> List[SubscriptionPlan]:
         """Get all subscription plans for an owner with optional filtering"""
-        query = db.query(SubscriptionPlan).filter(
-            and_(
-                SubscriptionPlan.owner_id == owner_id,
-                SubscriptionPlan.is_deleted == False,
+        query = (
+            db.query(SubscriptionPlan)
+            .options(joinedload(SubscriptionPlan.applicable_lots))
+            .filter(
+                and_(
+                    SubscriptionPlan.owner_id == owner_id,
+                    SubscriptionPlan.is_deleted == False,
+                )
             )
         )
 
@@ -147,6 +182,7 @@ class SubscriptionService:
         """Get a specific subscription plan with owner authorization"""
         plan = (
             db.query(SubscriptionPlan)
+            .options(joinedload(SubscriptionPlan.applicable_lots))
             .filter(
                 and_(
                     SubscriptionPlan.id == plan_id, SubscriptionPlan.is_deleted == False
@@ -176,6 +212,15 @@ class SubscriptionService:
         # Get existing plan with authorization check
         db_plan = self.get_subscription_plan(plan_id, owner_id, db)
 
+        # Extract lot_ids if provided
+        lot_ids = updates.pop("lot_ids", None)
+        lot_id = updates.get("lot_id")
+
+        # Handle backward compatibility: if lot_id is provided but lot_ids is not, convert it
+        if lot_id is not None and lot_ids is None:
+            lot_ids = [lot_id] if lot_id else []
+            updates.pop("lot_id")
+
         # Validate updates if they contain pricing information
         if any(
             key in updates
@@ -188,6 +233,32 @@ class SubscriptionService:
             validation_data = {**db_plan.__dict__}
             validation_data.update(updates)
             self.validate_plan_data(validation_data)
+
+        # Validate lot_ids if provided
+        if lot_ids is not None:
+            if lot_ids:  # If not empty list
+                lots = (
+                    db.query(parking_model.ParkingLot)
+                    .filter(
+                        and_(
+                            parking_model.ParkingLot.id.in_(lot_ids),
+                            parking_model.ParkingLot.owner_id == owner_id,
+                        )
+                    )
+                    .all()
+                )
+
+                if len(lots) != len(lot_ids):
+                    found_ids = {lot.id for lot in lots}
+                    missing_ids = set(lot_ids) - found_ids
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Not authorized to update plan for parking lot(s): {missing_ids}",
+                    )
+                db_plan.applicable_lots = lots
+            else:
+                # Empty list means general plan (no specific lots)
+                db_plan.applicable_lots = []
 
         # Apply updates
         update_data = {k: v for k, v in updates.items() if v is not None}
@@ -458,15 +529,10 @@ class SubscriptionService:
                 "plan_type": plan.plan_type.value,
                 "monthly_price": plan.monthly_price,
                 "annual_price": plan.annual_price,
-                "quarterly_price": plan.quarterly_price,
-                "weekly_price": plan.weekly_price,
                 "billing_cycle": plan.billing_cycle.value,
-                "trial_period_days": plan.trial_period_days,
-                "max_parking_hours_per_month": plan.max_parking_hours_per_month,
+                "billing_interval": plan.billing_interval,
                 "max_vehicles": plan.max_vehicles,
-                "priority_booking": plan.priority_booking,
                 "reserved_slots": plan.reserved_slots,
-                "premium_support": plan.premium_support,
                 "features": plan.features,
                 "is_featured": plan.is_featured,
                 "lot_name": None,

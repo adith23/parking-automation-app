@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum, Float, Index
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from ...core.database import Base
 import enum
 
@@ -24,8 +24,8 @@ class ParkingSession(Base):
     license_plate = Column(String(20), nullable=False, index=True)
     
     # Timestamps
-    start_time = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    end_time = Column(DateTime, nullable=True)
+    start_time = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    end_time = Column(DateTime(timezone=True), nullable=True)
     
     # Status and duration
     status = Column(Enum(ParkingSessionStatus), default=ParkingSessionStatus.ACTIVE, nullable=False, index=True)
@@ -35,9 +35,9 @@ class ParkingSession(Base):
     parking_cost = Column(Float, nullable=True)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    
     # Relationships
     booking = relationship("Booking", back_populates="parking_sessions")
     vehicle = relationship("Vehicle", back_populates="parking_sessions")

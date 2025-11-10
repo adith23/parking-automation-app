@@ -12,7 +12,8 @@ class ParkingLotOwner(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     phone_number = Column(String(20), nullable=True)
+    address = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     parking_lots = relationship("ParkingLot", back_populates="owner")
-    # subscription_plans = relationship("SubscriptionPlan", back_populates="owner")
+    subscription_plans = relationship("SubscriptionPlan", back_populates="owner")

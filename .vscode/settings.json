@@ -1,5 +1,0 @@
-{
-  "git.ignoreLimitWarning": true,
-  "python.analysis.typeCheckingMode": "basic",
-  "cursorpyright.analysis.typeCheckingMode": "basic"
-}

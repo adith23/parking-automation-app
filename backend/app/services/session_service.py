@@ -2,7 +2,8 @@ from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
 from fastapi import HTTPException, status
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import math
 import logging
 import re
 
@@ -193,16 +194,16 @@ class SessionService:
             if old_status == "available" and new_status == "occupied":
                 if license_plate:
                     return self.detect_license_plate_arrival(
-                        license_plate, slot_id, datetime.utcnow()
+                        license_plate, slot_id, datetime.now(timezone.utc)
                     )
                 return None
 
             # Handle departure: occupied → available
             if old_status == "occupied" and new_status == "available":
-                return self.end_session_by_slot(slot_id, datetime.utcnow(), db)
+                 end_time = datetime.now(timezone.utc)
+                 return self.end_session_by_slot(slot_id, end_time, db)
 
             return None
-
         except Exception as e:
             logger.error(f"Error handling slot status change: {e}")
             return None
@@ -293,16 +294,8 @@ class SessionService:
             duration = (end_time - session.start_time).total_seconds() / 60.0
             session.total_duration_minutes = duration
 
-            # Calculate cost
-            parking_lot = (
-                db.query(ParkingLot)
-                .filter(ParkingLot.id == session.parking_lot_id)
-                .first()
-            )
-
-            if parking_lot:
-                hours = duration / 60.0
-                session.parking_cost = parking_lot.price_per_hour * hours
+            # Use the dedicated cost calculation method instead of duplicating logic
+            session.parking_cost = self.calculate_session_cost(session_id, db)
 
             db.commit()
             db.refresh(session)
@@ -373,11 +366,12 @@ class SessionService:
             else:
                 # Active session - calculate up to now
                 duration_minutes = (
-                    datetime.utcnow() - session.start_time
+                    datetime.now(timezone.utc) - session.start_time
                 ).total_seconds() / 60.0
 
-            hours = duration_minutes / 60.0
-            cost = parking_lot.price_per_hour * hours
+            # Calculate cost using 30-minute blocks (round up)
+            blocks = math.ceil(duration_minutes / 30.0)
+            cost = parking_lot.price_per_hour * (blocks * 30 / 60.0)
 
             return cost
 

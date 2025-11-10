@@ -2,11 +2,16 @@ from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from enum import Enum
-
+from app.models.owner_models.subscription_model import (
+    BillingCycle,
+    PlanStatus,
+    PlanType,
+)
 
 class BillingCycleEnum(str, Enum):
     MONTHLY = "monthly"
     ANNUAL = "annual"
+
 
 class PlanStatusEnum(str, Enum):
     ACTIVE = "active"
@@ -14,8 +19,20 @@ class PlanStatusEnum(str, Enum):
     ARCHIVED = "archived"
     DRAFT = "draft"
 
+
 class PlanTypeEnum(str, Enum):
     BASIC = "basic"
+    PREMIUM = "premium"
+    ENTERPRISE = "enterprise"
+
+
+class ParkingLotInfo(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
 
 # Base Plan Schema
 class SubscriptionPlanBase(BaseModel):
@@ -23,7 +40,7 @@ class SubscriptionPlanBase(BaseModel):
     description: Optional[str] = Field(
         None, max_length=1000, description="Plan description"
     )
-    plan_type: PlanTypeEnum = Field(PlanTypeEnum.BASIC, description="Type of plan")
+    plan_type: PlanType = Field(PlanType.BASIC, description="Type of plan")
 
     # Pricing
     monthly_price: float = Field(..., gt=0, description="Monthly price in USD")
@@ -56,7 +73,11 @@ class SubscriptionPlanBase(BaseModel):
 
     # Geographic Scope
     lot_id: Optional[int] = Field(
-        None, description="Specific parking lot ID (null = general plan)"
+        None, description="Specific parking lot ID (deprecated: use lot_ids instead)"
+    )
+    lot_ids: Optional[List[int]] = Field(
+        None,
+        description="List of parking lot IDs this plan applies to (empty/null = general plan for all lots)",
     )
 
     # Effective Dates
@@ -65,14 +86,19 @@ class SubscriptionPlanBase(BaseModel):
     )
     effective_until: Optional[datetime] = Field(None, description="When plan expires")
 
+    class Config:
+        use_enum_values = True
+        from_attributes = True
+
+
 # Create Plan Schema
 class SubscriptionPlanCreate(SubscriptionPlanBase):
-    @validator("annual_price", "quarterly_price", "weekly_price")
+    @validator("annual_price")
     def validate_pricing_consistency(cls, v, values):
         if v is not None:
             monthly = values.get("monthly_price")
-            if monthly and v <= monthly:
-                raise ValueError(f"Discounted price must be less than monthly price")
+            if monthly and v >= monthly * 12:
+                raise ValueError("Annual price should be less than monthly price × 12")
         return v
 
     @validator("effective_until")
@@ -82,11 +108,12 @@ class SubscriptionPlanCreate(SubscriptionPlanBase):
                 raise ValueError("Effective until must be after effective from")
         return v
 
+
 # Update Plan Schema
 class SubscriptionPlanUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = Field(None, max_length=1000)
-    plan_type: Optional[PlanTypeEnum] = None
+    plan_type: Optional[PlanType] = None
 
     # Pricing updates
     monthly_price: Optional[float] = Field(None, gt=0)
@@ -108,7 +135,13 @@ class SubscriptionPlanUpdate(BaseModel):
     max_subscribers: Optional[int] = Field(None, ge=1)
 
     # Status updates
-    status: Optional[PlanStatusEnum] = None
+    status: Optional[PlanStatus] = None
+
+    # Geographic scope updates
+    lot_id: Optional[int] = Field(None, description="Deprecated: use lot_ids instead")
+    lot_ids: Optional[List[int]] = Field(
+        None, description="List of parking lot IDs this plan applies to"
+    )
 
     # Effective dates
     effective_from: Optional[datetime] = None
@@ -119,16 +152,23 @@ class SubscriptionPlanUpdate(BaseModel):
 class SubscriptionPlanResponse(SubscriptionPlanBase):
     id: int
     owner_id: int
-    status: PlanStatusEnum
+    status: PlanStatus
     created_at: datetime
     updated_at: datetime
     effective_from: Optional[datetime]
     effective_until: Optional[datetime]
+    lot_ids: Optional[List[int]] = Field(
+        None, description="List of parking lot IDs this plan applies to"
+    )
 
     # Computed fields
     total_subscribers: int = Field(0, description="Current number of subscribers")
     is_available: bool = Field(
         True, description="Whether plan is available for new subscriptions"
+    )
+
+    applicable_lots: Optional[List[ParkingLotInfo]] = Field(
+        None, description="List of parking lots this plan applies to"
     )
 
     class Config:

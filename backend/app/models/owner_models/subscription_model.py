@@ -1,119 +1,224 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, Enum, Text, JSON
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy.sql import func
 from datetime import datetime
 from enum import Enum as PyEnum
-from ...database import Base
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    JSON,
+    String,
+    Table,
+    Text,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.sql import func
+from ...core.database import Base
+
+# ===============================================
+#  Enums
+# ===============================================
 
 
-class BillingCycle(PyEnum):
-    """Billing cycle options for subscription plans"""
+class BillingCycle(str, PyEnum):
+    """Billing cycle options for subscription plans."""
+
     MONTHLY = "monthly"
     ANNUAL = "annual"
 
-class PlanStatus(PyEnum):
-    """Status of subscription plans"""
+
+class PlanStatus(str, PyEnum):
+    """Status of subscription plans."""
+
     ACTIVE = "active"
     INACTIVE = "inactive"
     ARCHIVED = "archived"
     DRAFT = "draft"
 
-class PlanType(PyEnum):
-    """Type of subscription plan"""
+
+class PlanType(str, PyEnum):
+    """Type of subscription plan."""
+
     BASIC = "basic"
+    PREMIUM = "premium"
+    ENTERPRISE = "enterprise"
+
+
+# ===============================================
+#  Association Table
+# ===============================================
+
+# Association table for the many-to-many relationship
+# between SubscriptionPlan and ParkingLot.
+subscription_plan_lots = Table(
+    "subscription_plan_lots",
+    Base.metadata,
+    Column(
+        "plan_id",
+        Integer,
+        ForeignKey("subscription_plans.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "lot_id",
+        Integer,
+        ForeignKey("parking_lots.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+# ===============================================
+#  SQLAlchemy Models
+# ===============================================
+
 
 class SubscriptionPlan(Base):
-    """Model for subscription plans created by parking lot owners"""
+    """Model for subscription plans created by parking lot owners."""
+
     __tablename__ = "subscription_plans"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
-    # Basic Plan Information
+
+    # --- Core Plan Details ---
     name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
     plan_type = Column(Enum(PlanType), default=PlanType.BASIC, nullable=False)
-    
-    # Pricing Configuration
-    monthly_price = Column(Float, nullable=False)  # Base monthly price
-    annual_price = Column(Float, nullable=True)   # Annual price (if different from monthly)
-    
-    # Billing Configuration
-    billing_cycle = Column(Enum(BillingCycle), default=BillingCycle.MONTHLY, nullable=False)
-    billing_interval = Column(Integer, default=1, nullable=False)  
-    
-    # Plan Features and Limits
+
+    # --- Pricing ---
+    monthly_price = Column(Float, nullable=False)
+    annual_price = Column(Float, nullable=True)
+
+    # --- Billing ---
+    billing_cycle = Column(
+        Enum(BillingCycle), default=BillingCycle.MONTHLY, nullable=False
+    )
+    billing_interval = Column(Integer, default=1, nullable=False)
+
+    # --- Features & Limits ---
     max_vehicles = Column(Integer, default=1, nullable=False)
     reserved_slots = Column(Boolean, default=False, nullable=False)
-    
-    # Additional Features (stored as JSON for flexibility)
-    features = Column(JSON, nullable=True)  # Custom features like "free_charging", "car_wash_discount"
-    
-    # Plan Status and Visibility
+    features = Column(JSON, nullable=True)  # For custom features
+
+    # --- Status & Visibility ---
     status = Column(Enum(PlanStatus), default=PlanStatus.DRAFT, nullable=False)
-    is_featured = Column(Boolean, default=False, nullable=False)  # Highlight in listings
-    max_subscribers = Column(Integer, nullable=True)  # Limit total subscribers (null = unlimited)
-    
-    # Relationships
+    is_featured = Column(Boolean, default=False, nullable=False)
+    max_subscribers = Column(Integer, nullable=True)
+    is_available = Column(Boolean, nullable=False, server_default="true")
+
+    # --- Foreign Keys ---
     owner_id = Column(Integer, ForeignKey("parking_lot_owners.id"), nullable=False)
-    lot_id = Column(Integer, ForeignKey("parking_lots.id"), nullable=True)  # null = general plan
-    
-    # Timestamps
+    lot_id = Column(
+        Integer, ForeignKey("parking_lots.id"), nullable=True
+    )  # Deprecated
+
+    # --- Timestamps ---
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    effective_from = Column(DateTime, nullable=True)  # When plan becomes active
-    effective_until = Column(DateTime, nullable=True)  # When plan expires
-    
-    # Soft delete
+    effective_from = Column(DateTime, nullable=True)
+    effective_until = Column(DateTime, nullable=True)
+
+    # --- Soft Delete ---
     is_deleted = Column(Boolean, default=False, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
-    
-    # Relationships
+
+    # --- Relationships ---
     owner = relationship("ParkingLotOwner", back_populates="subscription_plans")
-    parking_lot = relationship("ParkingLot", back_populates="subscription_plans")
-    driver_subscriptions = relationship("DriverSubscription", back_populates="plan", cascade="all, delete-orphan")
-    
+    # Deprecated relationship for backward compatibility
+    parking_lot = relationship(
+        "ParkingLot",
+        foreign_keys=[lot_id],
+        back_populates="subscription_plans",
+        overlaps="applicable_lots",
+    )
+    # Many-to-many relationship for applicable lots
+    applicable_lots = relationship(
+        "ParkingLot",
+        secondary="subscription_plan_lots",
+        back_populates="applicable_subscription_plans",
+        overlaps="parking_lot",
+    )
+    driver_subscriptions = relationship(
+        "DriverSubscription", back_populates="plan", cascade="all, delete-orphan"
+    )
+
     def __repr__(self):
-        return f"<SubscriptionPlan(id={self.id}, name='{self.name}', type={self.plan_type.value})>"
+        return f"<SubscriptionPlan(id={self.id}, name='{self.name}')>"
 
 
 class DriverSubscription(Base):
-    """Model for driver subscriptions to plans"""
+    """Model for driver subscriptions to plans."""
+
     __tablename__ = "driver_subscriptions"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
-    # Subscription Details
+
+    # --- Foreign Keys ---
     driver_id = Column(Integer, ForeignKey("drivers.id"), nullable=False)
     plan_id = Column(Integer, ForeignKey("subscription_plans.id"), nullable=False)
-    
-    # Subscription Status
-    status = Column(String(50), default="active", nullable=False)  # active, cancelled, suspended, expired
-    
-    # Billing Information
-    current_billing_cycle = Column(Enum(BillingCycle), nullable=False)
-    current_price = Column(Float, nullable=False)  # Price for current billing cycle
-    
-    # Subscription Period
+
+    # --- Status & Period ---
+    status = Column(String(50), default="active", nullable=False)
     start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=True)  # null for ongoing subscriptions
+    end_date = Column(DateTime, nullable=True)
     next_billing_date = Column(DateTime, nullable=False)
-    
-    # Cancellation Information
+
+    # --- Billing ---
+    current_billing_cycle = Column(Enum(BillingCycle), nullable=False)
+    current_price = Column(Float, nullable=False)
+
+    # --- Cancellation Info ---
     cancelled_at = Column(DateTime, nullable=True)
     cancellation_reason = Column(String(255), nullable=True)
     refund_amount = Column(Float, default=0.0, nullable=False)
-    
-    # Timestamps
+
+    # --- Timestamps ---
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
-    
-    # Relationships
+
+    # --- Relationships ---
     driver = relationship("Driver", back_populates="subscriptions")
     plan = relationship("SubscriptionPlan", back_populates="driver_subscriptions")
-    payments = relationship("SubscriptionPayment", back_populates="subscription", cascade="all, delete-orphan")
-    
+    # payments = relationship("SubscriptionPayment", back_populates="subscription") # Future implementation
+
     def __repr__(self):
-        return f"<DriverSubscription(id={self.id}, driver_id={self.driver_id}, plan_id={self.plan_id})>"
+        return f"<DriverSubscription(id={self.id}, driver_id={self.driver_id})>"
+
+
+class SubscriptionUsage(Base):
+    """Model for tracking subscription usage."""
+
+    __tablename__ = "subscription_usage"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+
+    # --- Foreign Keys ---
+    subscription_id = Column(Integer, ForeignKey("driver_subscriptions.id"), nullable=False)
+    session_id = Column(Integer, ForeignKey("parking_sessions.id"), nullable=True)
+
+    # --- Usage Metrics ---
+    parking_hours = Column(Float, nullable=False)
+    parking_cost = Column(Float, nullable=False)
+    subscription_discount = Column(Float, default=0.0, nullable=False)
+    final_cost = Column(Float, nullable=False)
+
+    # --- Usage Period ---
+    usage_date = Column(DateTime, nullable=False)
+    billing_period_start = Column(DateTime, nullable=False)
+    billing_period_end = Column(DateTime, nullable=False)
+
+    # --- Timestamps ---
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+
+    # --- Relationships ---
+    subscription = relationship("DriverSubscription")
+    parking_session = relationship("ParkingSession")
+
+    def __repr__(self):
+        return f"<SubscriptionUsage(id={self.id}, subscription_id={self.subscription_id})>"
 
 '''
 class SubscriptionPayment(Base):
@@ -150,34 +255,3 @@ class SubscriptionPayment(Base):
     def __repr__(self):
         return f"<SubscriptionPayment(id={self.id}, subscription_id={self.subscription_id}, amount={self.amount})>"
 '''
-
-class SubscriptionUsage(Base):
-    """Model for tracking subscription usage"""
-    __tablename__ = "subscription_usage"
-
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    
-    # Usage Details
-    subscription_id = Column(Integer, ForeignKey("driver_subscriptions.id"), nullable=False)
-    session_id = Column(Integer, ForeignKey("parking_sessions.id"), nullable=True)  # Link to parking session
-    
-    # Usage Metrics
-    parking_hours = Column(Float, nullable=False)
-    parking_cost = Column(Float, nullable=False)  # Cost without subscription
-    subscription_discount = Column(Float, default=0.0, nullable=False)  # Discount applied
-    final_cost = Column(Float, nullable=False)  # Cost after subscription
-    
-    # Usage Period
-    usage_date = Column(DateTime, nullable=False)
-    billing_period_start = Column(DateTime, nullable=False)
-    billing_period_end = Column(DateTime, nullable=False)
-    
-    # Timestamps
-    created_at = Column(DateTime, default=func.now(), nullable=False)
-    
-    # Relationships
-    subscription = relationship("DriverSubscription")
-    parking_session = relationship("ParkingSession")
-    
-    def __repr__(self):
-        return f"<SubscriptionUsage(id={self.id}, subscription_id={self.subscription_id}, hours={self.parking_hours})>"
