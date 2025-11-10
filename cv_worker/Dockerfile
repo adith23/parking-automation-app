@@ -1,9 +1,9 @@
-# Use an official NVIDIA base image with CUDA 12.4 and cuDNN 9
-FROM nvidia/cuda:12.4.1-cudnn9-runtime-ubuntu22.04
+# Use an official NVIDIA base image with CUDA 12.4 and cuDNN
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
 # Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
@@ -27,13 +27,13 @@ RUN python -m ensurepip
 RUN pip install --upgrade pip
 
 # Copy only the requirements file first to leverage Docker layer caching
-COPY ./cv_worker/requirements.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the CV worker source code and the entrypoint script
-COPY ./cv_worker/ .
+COPY . .
 
 # Make the entrypoint script executable
 RUN chmod +x ./entrypoint.sh
