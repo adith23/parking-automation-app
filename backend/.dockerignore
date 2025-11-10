@@ -1,0 +1,32 @@
+# backend/.dockerignore
+
+# Git files
+.git
+.gitignore
+
+# Python virtual environments
+.venv
+venv
+vision_env
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+
+# IDE and OS-specific files
+.idea
+.vscode
+.DS_Store
+
+# Documentation and local configs
+*.md
+environment.yml
+*.local
+.env
+
+# Sample data and large static files
+*.mp4
+*.png
+*.json
+*.pt

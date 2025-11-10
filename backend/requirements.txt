@@ -6,6 +6,12 @@ passlib[bcrypt]
 python-jose[cryptography]
 psycopg2-binary
 python-dotenv
-
+shapely
+opencv-python
+pydantic-settings
+redis
+twilio
+geoalchemy2
+python-socketio
 
 

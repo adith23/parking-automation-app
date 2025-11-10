@@ -1,8 +1,9 @@
 import axios from "axios";
+import { DeviceEventEmitter } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // 1. Base URL (adjust as needed)
-const BASE_URL = "http://192.168.43.182:8000/api/v1";
+const BASE_URL = "http://10.0.2.2:8000/api/v1";
 
 // 2. Create Axios instance
 const api = axios.create({
@@ -34,6 +35,7 @@ api.interceptors.response.use(
       // Optionally: clear token, redirect to login, show message, etc.
       await AsyncStorage.removeItem("token");
       // You can use a global event, navigation, or state to force logout
+      DeviceEventEmitter.emit("logout");
     }
     // Optionally handle other errors (network, 500, etc.)
     return Promise.reject(error);

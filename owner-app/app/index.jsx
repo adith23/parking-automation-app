@@ -3,6 +3,8 @@ import { SafeAreaView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import MyLogo from "../assets/images/mylogo.svg";
+import 'expo-dev-client';
+
 
 export default function Index() {
   const router = useRouter();
@@ -10,7 +12,7 @@ export default function Index() {
   useEffect(() => {
     const timer = setTimeout(() => {
       router.replace("/(auth)/login");
-    }, 5000); // 5 seconds
+    }, 2000); // 5 seconds
 
     return () => clearTimeout(timer);
   }, [router]);
@@ -27,7 +29,7 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffff",
     justifyContent: "flex-end", // center vertically
     alignItems: "center",
   },

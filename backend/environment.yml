@@ -1,0 +1,27 @@
+name: alpr-gpu
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  # ---- Core ----
+  - python=3.10
+  - pip
+  - numpy
+  - conda-forge::opencv
+
+  # ---- PyTorch + CUDA (GPU enabled) ----
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.4
+
+  # ---- OCR Engines ----
+  - tesseract    # Tesseract engine itself (from conda-forge)
+  - pytesseract  # Python wrapper for Tesseract (from conda-forge)
+
+  # ---- Utilities ----
+  - tqdm
+  - pillow
+  - matplotlib

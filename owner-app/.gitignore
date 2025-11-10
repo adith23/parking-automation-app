@@ -13,10 +13,19 @@ expo-env.d.ts
 .kotlin/
 *.orig.*
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
+
+# Android build artifacts
+android/app/build/  
+android/build/
+android/.gradle/  
+android/local.properties 
+*.apk  
+*.aab  
 
 # Metro
 .metro-health-check*
@@ -32,8 +41,14 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
 
-app-example
+# IDE
+.idea/
+*.iml 
+
+Requirements.md
+
