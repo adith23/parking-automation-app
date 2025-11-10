@@ -1,5 +1,5 @@
-# Use an official NVIDIA base image with CUDA 12.4 and cuDNN
-FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+# Use an official NVIDIA base image with CUDA 12.4 and cuDNN, built on Ubuntu 24.04
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu24.04
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -8,23 +8,18 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Install prerequisites and Python 3.12 from the deadsnakes PPA
+# Install Python 3.12 (which is default in Ubuntu 24.04), pip, venv, and awscli
+# No PPA is needed.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends \
     python3.12 \
-    python3.12-distutils \
     python3-pip \
+    python3.12-venv \
     awscli \
     && rm -rf /var/lib/apt/lists/*
 
-# Make python3.12 the default python and pip
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
-RUN python -m ensurepip
-RUN pip install --upgrade pip
+# Make python3.12 the default python
+RUN ln -s /usr/bin/python3.12 /usr/bin/python
 
 # Copy only the requirements file first to leverage Docker layer caching
 COPY requirements.txt .
