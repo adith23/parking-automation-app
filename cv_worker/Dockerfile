@@ -1,4 +1,4 @@
-# Use an official NVIDIA base image with CUDA 12.4 and cuDNN
+# Use an official NVIDIA base image with CUDA 12.4 and cuDNN on Ubuntu 22.04
 FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
 # Set environment variables
@@ -8,23 +8,22 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
-# Install prerequisites and Python 3.12 from the deadsnakes PPA
+# Install Python 3.11 (available in deadsnakes PPA for jammy) and other dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    python3.12 \
-    python3.12-distutils \
+    python3.11 \
+    python3.11-venv \
+    python3.11-distutils \
     python3-pip \
     awscli \
     && rm -rf /var/lib/apt/lists/*
 
-# Make python3.12 the default python and pip
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.12 1
-RUN python -m ensurepip
-RUN pip install --upgrade pip
+# Make python3.11 the default python
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python
 
 # Copy only the requirements file first to leverage Docker layer caching
 COPY requirements.txt .
