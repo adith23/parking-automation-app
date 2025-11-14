@@ -47,7 +47,7 @@ class ParkingLotBase(BaseModel):
     price_per_hour: float
     open_time: time
     close_time: time
-    is_open: bool
+    is_open: Optional[bool] = False
     additional_info: Optional[AdditionalInfo] = None
     media_urls: Optional[MediaURLs] = None
 

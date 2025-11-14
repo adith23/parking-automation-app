@@ -1,49 +1,61 @@
-# Stage 1: Use a slim, official Python base image
-FROM python:3.12-slim AS base
+# NVIDIA CUDA Base (GPU)
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04 AS base
 
-# Set environment variables to prevent Python from writing .pyc files and to buffer output
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install system dependencies required for Python packages like psycopg2
+# Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
+        python3 \
+        python3-pip \
+        python3-dev \
+        python3-venv \
+        build-essential \
+        libgl1 \
+        libglib2.0-0 \
+        libpq-dev \
+        git \
     && rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Install Python dependencies
+# Make python3 default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
+    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+
+# Install Python Deps
 FROM base AS python-deps
 
-# Copy only the requirements file to leverage Docker layer caching
-# CORRECTED PATH: Removed "./backend/"
 COPY requirements.txt .
 
-# Install dependencies
+# Install PyTorch CUDA 11.8 FIRST (GPU)
+RUN pip install --no-cache-dir \
+    torch==2.3.1 \
+    torchvision==0.18.1 \
+    torchaudio==2.3.1 \
+    --index-url https://download.pytorch.org/whl/cu118
+
+# Install all other dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Stage 3: Final application image
+# Final Runtime Image
 FROM base AS final
 
-# Copy installed dependencies from the previous stage
-COPY --from=python-deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+# Copy installed packages
+COPY --from=python-deps /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
 COPY --from=python-deps /usr/local/bin /usr/local/bin
 
-# Copy the application source code
-# CORRECTED PATH: Removed "./backend/"
+# Copy app source
 COPY app ./app
 
-# Set the python path to include the app directory
 ENV PYTHONPATH=/app
 
-# Create a non-root user and switch to it for security
+# Create non-root user
 RUN useradd --create-home appuser
 USER appuser
 
-# Expose the port the app runs on
 EXPOSE 8000
 
-# Command to run the application using uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
