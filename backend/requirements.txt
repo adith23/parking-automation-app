@@ -16,7 +16,6 @@ psycopg2-binary>=2.9.0
 torch==2.3.1
 torchvision==0.18.1
 torchaudio==2.3.1
---index-url https://download.pytorch.org/whl/cu118
 ultralytics>=8.0.0
 easyocr>=1.7.1
 opencv-python-headless==4.10.0.84
