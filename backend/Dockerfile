@@ -1,4 +1,4 @@
-# NVIDIA CUDA Base (GPU)
+# Python Slim Base (CPU)
 FROM python:3.10-slim-bullseye AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -36,7 +36,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM base AS final
 
 # Copy installed packages
-COPY --from=python-deps /usr/local/lib/python3.10/dist-packages /usr/local/lib/python3.10/dist-packages
+COPY --from=python-deps /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=python-deps /usr/local/bin /usr/local/bin
 
 # Copy app source
