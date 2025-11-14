@@ -1,55 +1,118 @@
-import cv2
 import os
-from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+import json
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from shapely.geometry import Polygon
 from geoalchemy2.elements import WKTElement
+from aiortc import RTCPeerConnection, RTCSessionDescription
+import logging
 
 from app import schemas, models
 from app.core.database import get_db
+from app.models.owner_models.parking_lot_model import ParkingLot
 from app.schemas.owner_schemas.parking_slot_schema import ParkingSlotBulkCreate
 from app.models.owner_models.parking_slot_model import ParkingSlot
+from app.services.webrtc_service import webrtc_manager, WebRTCVideoTrack
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # --- Path Configuration ---
-# In a real app, you would fetch the video path from the database based on the parking_lot_id
 script_dir = os.path.dirname(__file__)
-VIDEO_PATH = r"C:\Users\Adithya\Downloads\sample_video4..mp4"
+VIDEO_PATH = r"C:\Users\Adithya\Downloads\sample_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
-# --- Video Streaming Logic ---
-def generate_frames(video_path: str):
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise ConnectionError("Could not open video stream.")
 
-    while True:
-        success, frame = cap.read()
-        if not success:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)  # Loop video
-            continue
+def _get_raw_frame_processor():
+    """
+    Returns a simple frame processor that returns raw frames without CV processing.
+    Used for slot definition where we don't need occupancy detection.
+    """
 
-        ret, buffer = cv2.imencode(".jpg", frame)
-        if not ret:
-            continue
+    def process_raw_frame(frame):
+        return frame
 
-        frame_bytes = buffer.tobytes()
-        yield (
-            b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+    return process_raw_frame
+
+
+@router.websocket("/ws/{parking_lot_id}/define-slots")
+async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
+    """
+    WebRTC endpoint for defining parking slots.
+    Accepts WebRTC offer, returns answer with raw video track (no CV processing).
+    """
+    await websocket.accept()
+
+    session_id = f"define-slots-{parking_lot_id}"
+    pc = RTCPeerConnection()
+    video_source = None
+
+    try:
+        if not os.path.exists(VIDEO_PATH):
+            await websocket.send_text(json.dumps({"error": "Video source not found"}))
+            return
+
+        # Create a dedicated video source for this client session
+        from app.services.webrtc_service import VideoTrackSource
+        video_source = VideoTrackSource(
+            video_path=VIDEO_PATH,
+            frame_processor=_get_raw_frame_processor(),
+            fps=30,
         )
-    cap.release()
 
-@router.get("/{parking_lot_id}/stream", summary="Stream video for a parking lot")
-async def video_stream(parking_lot_id: int):
-    if not os.path.exists(VIDEO_PATH):
-        raise HTTPException(status_code=404, detail="Video source not found.")
+        # Start the video source (create queue in async context)
+        await video_source.start()
 
-    return StreamingResponse(
-        generate_frames(VIDEO_PATH),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+        # Create and add video track
+        video_track = WebRTCVideoTrack(
+            track_id=f"video-{session_id}",
+            video_source=video_source,
+        )
+        pc.addTrack(video_track)
+
+        # Create session record
+        webrtc_manager.create_session(session_id, parking_lot_id)
+        logger.info(f"✅ WebRTC session created for slot definition: {session_id}")
+
+        # Handle incoming WebRTC offer
+        data = await websocket.receive_text()
+        offer_data = json.loads(data)
+
+        offer = RTCSessionDescription(sdp=offer_data["sdp"], type=offer_data["type"])
+
+        # Set remote description and create answer
+        await pc.setRemoteDescription(offer)
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+
+        # Send answer back to client
+        await websocket.send_text(
+            json.dumps({"type": "answer", "sdp": pc.localDescription.sdp})
+        )
+
+        logger.info(f"✅ WebRTC answer sent for slot definition session: {session_id}")
+
+        # Keep connection alive
+        while True:
+            try:
+                await websocket.receive_text()
+            except Exception as e:
+                logger.info(f"WebSocket connection closed for {session_id}: {e}")
+                break
+
+    except Exception as e:
+        logger.error(f"❌ Error in define slots WebRTC: {e}")
+        await websocket.send_text(json.dumps({"error": str(e)}))
+
+    finally:
+        # Clean up
+        if video_source:
+            await video_source.stop()
+        webrtc_manager.remove_session(session_id)
+        await pc.close()
+        logger.info(f"✅ WebRTC session closed: {session_id}")
+
 
 # --- Save Slots Logic ---
 @router.post(
@@ -89,16 +152,24 @@ async def save_parking_slots(
         print(f"❌ Error while saving slots: {e}")
         raise HTTPException(status_code=500, detail=f"Error saving slots: {str(e)}")
 
+
 # --- Endpoint to Serve the HTML page ---
 @router.get("/{parking_lot_id}/define-slots-ui", response_class=HTMLResponse)
-async def get_define_slots_page(parking_lot_id: int):
-    html_path = os.path.join(TEMPLATES_PATH, "define_slots.html")
-    if not os.path.exists(html_path):
-        raise HTTPException(status_code=404, detail="HTML template not found.")
+async def get_define_slots_page(parking_lot_id: int, db: Session = Depends(get_db)):
+    """Serve the HTML page for defining parking slots"""
+    try:
+        parking_lot = (
+            db.query(ParkingLot).filter(ParkingLot.id == parking_lot_id).first()
+        )
 
-    with open(html_path, "r") as f:
-        html_content = f.read()
+        if not parking_lot:
+            raise HTTPException(status_code=404, detail="Parking lot not found")
 
-    # Inject the dynamic URL into the HTML
-    html_content = html_content.replace("{{ parking_lot_id }}", str(parking_lot_id))
-    return HTMLResponse(content=html_content)
+        template_path = os.path.join(TEMPLATES_PATH, "define_slots.html")
+        with open(template_path, "r", encoding="utf-8") as f:
+            html_content = f.read().replace("{{ parking_lot_id }}", str(parking_lot_id))
+
+        return html_content
+    except Exception as e:
+        logger.error(f"Error serving define slots page: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to load define slots page")

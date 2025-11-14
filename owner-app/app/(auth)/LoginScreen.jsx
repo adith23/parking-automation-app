@@ -30,7 +30,7 @@ export default function LoginScreen() {
   // If already logged in, redirect to main app
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/HomeScreen");
     }
   }, [authLoading, user, router]);
 

@@ -47,6 +47,7 @@ class ParkingLotBase(BaseModel):
     price_per_hour: float
     open_time: time
     close_time: time
+    is_open: Optional[bool] = False
     additional_info: Optional[AdditionalInfo] = None
     media_urls: Optional[MediaURLs] = None
 
@@ -65,8 +66,14 @@ class ParkingLotUpdate(BaseModel):
     price_per_hour: Optional[float] = None
     open_time: Optional[time] = None
     close_time: Optional[time] = None
+    is_open: Optional[bool] = None
     additional_info: Optional[AdditionalInfo] = None
     media_urls: Optional[MediaURLs] = None
+
+
+# Schema for updating just the status
+class ParkingLotStatusUpdate(BaseModel):
+    is_open: bool
 
 
 # Schema for reading/responding with parking lot data

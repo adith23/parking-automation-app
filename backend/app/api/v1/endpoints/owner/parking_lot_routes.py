@@ -4,8 +4,9 @@ from typing import List
 
 from app.schemas.owner_schemas.parking_lot_schema import (
     ParkingLotCreate,
-    ParkingLotResponse, 
+    ParkingLotResponse,
     ParkingLotUpdate,
+    ParkingLotStatusUpdate,
 )
 from app.models.owner_models.owner_model import ParkingLotOwner
 from app.core.deps import get_db, get_current_owner
@@ -69,7 +70,7 @@ def get_parking_lot(
     return parking_service.get_parking_lot(
         parking_lot_id=parking_lot_id, owner_id=current_owner.id, db=db
     )
-
+    
 
 @router.put(
     "/{parking_lot_id}",
@@ -93,6 +94,27 @@ def update_parking_lot(
         db=db,
     )
 
+@router.patch(
+    "/{parking_lot_id}/status",
+    response_model=ParkingLotResponse,
+    summary="Update parking lot status",
+)
+def update_parking_lot_status(
+    *,
+    db: Session = Depends(get_db),
+    parking_lot_id: int,
+    status_in: ParkingLotStatusUpdate,
+    current_owner: ParkingLotOwner = Depends(get_current_owner),
+):
+    """
+    Update a parking lot's open/close status (Open/Closed).
+    """
+    return parking_service.update_parking_lot_status(
+        parking_lot_id=parking_lot_id,
+        owner_id=current_owner.id,
+        is_open=status_in.is_open,
+        db=db,
+    )
 
 '''
 @router.delete(

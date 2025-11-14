@@ -33,7 +33,7 @@ export default function Signup() {
     try {
       await register({ name, email, password });
       Alert.alert("Success", "Account created! Please log in.");
-      router.replace("/(auth)/login");
+      router.replace("/(auth)/LoginScreen");
     } catch (error) {
       console.log(error);
       let message = "Registration failed. Please try again.";
@@ -104,7 +104,7 @@ export default function Signup() {
             <FacebookIcon style={styles.icon} />
           </View>
           <View style={styles.navigation}>
-            <Link href="/(auth)/login">
+            <Link href="/(auth)/LoginScreen">
               <Text style={styles.linktext}>Have an account? Log In</Text>
             </Link>
           </View>

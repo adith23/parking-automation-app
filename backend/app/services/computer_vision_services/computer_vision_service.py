@@ -1,14 +1,17 @@
 import cv2
 import json
+import os
+import re
+import io
 import numpy as np
 from ultralytics import YOLO
 import easyocr
 import re
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+from google.cloud import vision
 
 from sqlalchemy.orm import Session
-
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.core.redis import get_redis
@@ -19,16 +22,17 @@ from app.services.session_service import session_service
 VEHICLE_MODEL_PATH = "yolo11n.pt"
 LPR_MODEL_PATH = "license-plate-finetune-v1n.pt"
 
-
-def cleanup_plate_text(raw_text):
-    """Cleans the raw OCR text to get a more accurate license plate number."""
-    if not raw_text:
-        return ""
-    return re.sub(r"[^A-Z0-9]", "", raw_text).upper()
-
-
 OCCUPIED_FRAME_THRESHOLD = 3
 EMPTY_FRAME_THRESHOLD = 3
+OCR_INTERVAL_SECONDS = 3
+
+
+def cleanup_plate_text(raw_text: str) -> str:
+    """Cleans and corrects OCR license plate text."""
+    if not raw_text:
+        return ""
+    text = re.sub(r"[^A-Z0-9]", "", raw_text.upper())
+    return text[:10]
 
 
 class ComputerVisionService:
@@ -38,26 +42,14 @@ class ComputerVisionService:
     """
 
     def __init__(self, parking_slots: List[Dict[str, np.ndarray]]):
-        """
-        Initializes the Computer Vision service.
 
-        Args:
-            parking_slots_polygons (list): A list of polygons (as numpy arrays)
-                                           representing the parking slots.
-        """
         print("✅ Initializing Computer Vision Service...")
 
         # --- Model Initialization ---
         self.vehicle_model = YOLO(VEHICLE_MODEL_PATH)
-        try:
-            self.lpr_model = YOLO(LPR_MODEL_PATH)
-        except Exception as e:
-            print(f"⚠️ Error loading license plate model: {e}")
-            raise  # Re-raise the exception to stop the service if the model fails
-
-        # Initialize OCR reader. Consider specifying the GPU device if you have multiple.
-        self.reader = easyocr.Reader(["en"], gpu=True)
-        print("✅ Models loaded successfully.")
+        self.lpr_model = YOLO(LPR_MODEL_PATH)
+        self.vision_client = vision.ImageAnnotatorClient()
+        print("✅ Google Vision OCR initialized successfully.")
 
         # --- State Variables ---
         self.slots: Dict[int, Dict[str, Any]] = {}
@@ -78,8 +70,55 @@ class ComputerVisionService:
 
         self.mutable_statuses = {"available", "occupied"}
         self.best_vehicle_plates = {}
-        # Track which license plate is in which slot: {slot_id: license_plate}
+        self.ocr_buffer = {}
         self.slot_license_plates: Dict[int, str] = {}
+
+    def _calculate_crop_quality(
+        self, crop: np.ndarray, detection_confidence: float
+    ) -> float:
+        """Calculates a quality score for a license plate crop based on sharpness, size, and detector confidence."""
+        if crop is None or crop.size == 0:
+            return 0.0
+
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        sharpness = cv2.Laplacian(gray, cv2.CV_64F).var()
+        area = crop.shape[0] * crop.shape[1]
+
+        # Normalize metrics to balance their influence
+        normalized_sharpness = min(sharpness / 1000.0, 1.0)
+        normalized_area = min(area / 15000.0, 1.0)
+
+        # Weighted score
+        score = (
+            (detection_confidence * 0.5)
+            + (normalized_sharpness * 0.3)
+            + (normalized_area * 0.2)
+        )
+        return score
+
+    def _google_ocr(self, image_np: np.ndarray):
+        """Run Google Vision OCR on a NumPy BGR image and return text + confidence."""
+        try:
+            success, encoded_img = cv2.imencode(".jpg", image_np)
+            if not success:
+                return None, 0.0
+
+            content = io.BytesIO(encoded_img.tobytes())
+            image = vision.Image(content=content.getvalue())
+
+            response = self.vision_client.text_detection(image=image)
+            annotations = response.text_annotations
+
+            if not annotations:
+                return None
+
+            text = annotations[0].description.strip()
+            print(f"👁️ Google Vision API Result: '{text}'")
+            return text
+
+        except Exception as e:
+            print(f"⚠️ Google OCR error: {e}")
+            return None
 
     def process_frame(self, frame):
         """
@@ -93,6 +132,7 @@ class ComputerVisionService:
             np.ndarray: The frame with annotations (bounding boxes, polygons, text) drawn on it.
         """
         annotated_frame = frame.copy()
+        now = datetime.now(timezone.utc)
 
         # 1. Track Vehicles
         vehicle_results = self.vehicle_model.track(
@@ -107,39 +147,73 @@ class ComputerVisionService:
 
         # 2. Detect License Plates
         lpr_results = self.lpr_model(frame, verbose=False)
-        plate_boxes = (
-            lpr_results[0].boxes.xyxy.cpu().numpy()
+        plate_detections = (
+            lpr_results[0].boxes.data.cpu().numpy()
             if lpr_results[0].boxes is not None
             else []
         )
 
-        # 3. OCR Logic with Continuous Confidence Checking
-        for plate_box in plate_boxes:
-            px1, py1, px2, py2 = map(int, plate_box)
+        # 3. Assess and Buffer Best Plate Crop
+        for plate_detection in plate_detections:
+            px1, py1, px2, py2, plate_confidence, _ = plate_detection
+            px1, py1, px2, py2 = map(int, (px1, py1, px2, py2))
+
             for vehicle in tracked_vehicles:
                 vx1, vy1, vx2, vy2, track_id = map(int, vehicle[:5])
-                # Check if plate center is inside vehicle box
                 if vx1 < (px1 + px2) / 2 < vx2 and vy1 < (py1 + py2) / 2 < vy2:
                     plate_crop = frame[py1:py2, px1:px2]
-                    ocr_result = self.reader.readtext(plate_crop)
-                    if ocr_result:
-                        plate_text = cleanup_plate_text(ocr_result[0][1])
-                        confidence = ocr_result[0][2]
-                        if plate_text:
-                            if (
-                                track_id not in self.best_vehicle_plates
-                                or confidence
-                                > self.best_vehicle_plates[track_id]["confidence"]
-                            ):
-                                self.best_vehicle_plates[track_id] = {
-                                    "text": plate_text,
-                                    "confidence": confidence,
-                                }
+                    quality_score = self._calculate_crop_quality(
+                        plate_crop, plate_confidence
+                    )
+
+                    if (
+                        track_id not in self.ocr_buffer
+                        or quality_score > self.ocr_buffer[track_id]["score"]
+                    ):
+                        last_time = self.ocr_buffer.get(track_id, {}).get(
+                            "last_ocr_time", datetime.min.replace(tzinfo=timezone.utc)
+                        )
+                        self.ocr_buffer[track_id] = {
+                            "crop": plate_crop.copy(),
+                            "score": quality_score,
+                            "last_ocr_time": last_time,
+                        }
                     break
 
-        # In computer_vision_service.py, modify the occupancy detection section:
+            # 4. Trigger Timed OCR for currently tracked vehicles
+            for track_id in self.ocr_buffer.keys():
+                if track_id in {
+                    int(v[4]) for v in tracked_vehicles
+                }:  # Check if vehicle is still being tracked
+                    buffer_entry = self.ocr_buffer[track_id]
+                    time_since_last_ocr = (
+                        now - buffer_entry["last_ocr_time"]
+                    ).total_seconds()
 
-        # 4. Occupancy and Drawing Logic
+                    if time_since_last_ocr > OCR_INTERVAL_SECONDS:
+                        print(
+                            f"✅ Triggering timed OCR for track {track_id} (Quality: {buffer_entry['score']:.2f})"
+                        )
+                        raw_text = self._google_ocr(buffer_entry["crop"])
+
+                        if raw_text:
+                            plate_text = cleanup_plate_text(raw_text)
+                            if plate_text:
+                                self.best_vehicle_plates[track_id] = {
+                                    "text": plate_text,
+                                    "confidence": quality_score,
+                                }
+
+                        # Update the timestamp
+                        self.ocr_buffer[track_id]["last_ocr_time"] = now
+
+        # Clean up buffer for tracks that are no longer visible
+        current_track_ids = {int(v[4]) for v in tracked_vehicles}
+        for track_id in list(self.ocr_buffer.keys()):
+            if track_id not in current_track_ids:
+                del self.ocr_buffer[track_id]
+
+        # 5. Occupancy and Drawing Logic
         for state in self.slots.values():
             slot_id = state["slot_id"]
             flat_polygon = state["flat_polygon"]
@@ -152,7 +226,6 @@ class ComputerVisionService:
                 track_id_in_slot = None
 
                 # Check which vehicles are in this slot and get their license plates
-                # DON'T break early - check all vehicles to find the best license plate
                 for vehicle in tracked_vehicles:
                     vx1, vy1, vx2, vy2, track_id = map(int, vehicle[:5])
                     center_x, center_y = (vx1 + vx2) / 2, (vy1 + vy2) / 2
@@ -174,7 +247,6 @@ class ComputerVisionService:
                                 self.slot_license_plates[slot_id] = (
                                     detected_license_plate
                                 )
-                        # DON'T break - continue checking all vehicles
 
                 # If slot is already occupied, check for license plate in stored dict
                 if (
@@ -192,7 +264,7 @@ class ComputerVisionService:
                         and state["occupied_count"] >= OCCUPIED_FRAME_THRESHOLD
                     ):
                         state["status"] = "occupied"
-                        # If transitioning to occupied and we have a license plate, try to detect arrival
+                        # If transitioning to occupied and have a license plate, try to detect arrival
                         if detected_license_plate:
                             try:
                                 session_service.detect_license_plate_arrival(
@@ -248,8 +320,18 @@ class ComputerVisionService:
                     self._handle_status_change(state, current_status, license_plate)
                     state["last_published_status"] = current_status
 
+            # --- Draw polygon fill + border based on status ---
             color = self._status_color(current_status)
             label = self._status_label(state)
+
+            overlay = annotated_frame.copy()
+            cv2.fillPoly(overlay, [state["polygon"]], color)
+            alpha = 0.3
+            cv2.addWeighted(
+                overlay, alpha, annotated_frame, 1 - alpha, 0, annotated_frame
+            )
+
+            # Border outline
             cv2.polylines(
                 annotated_frame,
                 [state["polygon"]],
@@ -257,6 +339,8 @@ class ComputerVisionService:
                 color=color,
                 thickness=2,
             )
+
+            # Label text
             text_pos = (
                 int(np.min(flat_polygon[:, 0])),
                 int(np.min(flat_polygon[:, 1]) - 5),
@@ -267,28 +351,51 @@ class ComputerVisionService:
                 text_pos,
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                color,
+                (255, 255, 255),
                 2,
             )
 
         # Draw vehicle boxes and license plates
         for vehicle in tracked_vehicles:
             vx1, vy1, vx2, vy2, track_id = map(int, vehicle[:5])
-            cv2.rectangle(annotated_frame, (vx1, vy1), (vx2, vy2), (255, 0, 0), 2)
+            cv2.rectangle(annotated_frame, (vx1, vy1), (vx2, vy2), (255, 255, 255), 2)
             label = f"ID: {track_id}"
             if track_id in self.best_vehicle_plates:
                 best_plate = self.best_vehicle_plates[track_id]
                 label += (
                     f" Plate: {best_plate['text']} ({best_plate['confidence']:.2f})"
                 )
+
+            # --- Draw background rectangle for text ---
+            font_scale = 0.6
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            thickness = 2
+
+            # Calculate text size
+            (text_width, text_height), baseline = cv2.getTextSize(
+                label, font, font_scale, thickness
+            )
+            text_x = vx1
+            text_y = max(vy1 - 10, text_height + 10)
+
+            # Draw filled white rectangle as background
+            cv2.rectangle(
+                annotated_frame,
+                (text_x - 2, text_y - text_height - 4),
+                (text_x + text_width + 2, text_y + baseline),
+                (255, 255, 255),
+                cv2.FILLED,
+            )
+
+            # Draw black text on top of white background
             cv2.putText(
                 annotated_frame,
                 label,
-                (vx1, vy1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 255, 255),
-                2,
+                (text_x, text_y - 2),
+                font,
+                font_scale,
+                (0, 0, 0),  # black text
+                thickness,
             )
 
         return annotated_frame
@@ -349,69 +456,3 @@ class ComputerVisionService:
         base = state.get("label", f"Slot {state['slot_id']}")
         status = state.get("last_published_status", state.get("status", "unknown"))
         return f"{base} ({status})"
-
-
-# --- Standalone Execution for Testing ---
-# This block allows you to run this file directly to test the CV service
-# without needing the FastAPI server. It's very useful for debugging.
-if __name__ == "__main__":
-    VIDEO_PATH = "sample_video.mp4"
-    SLOTS_PATH = "parking_slots.json"
-
-    def load_parking_slots(file_path):
-        try:
-            with open(file_path, "r") as f:
-                slots_data = json.load(f)
-                definitions = []
-                for idx, feature in enumerate(slots_data["features"], start=1):
-                    coords = np.array(
-                        feature["geometry"]["coordinates"][0], np.int32
-                    ).reshape((-1, 1, 2))
-                    definitions.append(
-                        {
-                            "slot_id": idx,
-                            "parking_lot_id": 0,
-                            "polygon": coords,
-                            "status": feature.get("properties", {}).get(
-                                "status", "available"
-                            ),
-                            "label": feature.get("properties", {}).get(
-                                "slot_number", f"Slot {idx}"
-                            ),
-                        }
-                    )
-                return definitions
-        except FileNotFoundError:
-            print(f"Error: Parking slots file not found at {file_path}")
-            return []
-
-    # 1. Load data
-    parking_slot_defs = load_parking_slots(SLOTS_PATH)
-    if not parking_slot_defs:
-        exit()
-
-    # 2. Initialize the service
-    cv_service = ComputerVisionService(parking_slots=parking_slot_defs)
-
-    # 3. Run the processing loop
-    cap = cv2.VideoCapture(VIDEO_PATH)
-    if not cap.isOpened():
-        print(f"Error: Cannot open video {VIDEO_PATH}")
-        exit()
-
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            print("Video stream ended.")
-            break
-
-        # 4. Process each frame using the service
-        processed_frame = cv_service.process_frame(frame)
-
-        cv2.imshow("Smart Parking System - ALPR (Test)", processed_frame)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-    print("✅ Processing complete.")

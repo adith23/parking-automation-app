@@ -6,8 +6,8 @@ import ssl
 import logging
 from urllib.parse import urlparse
 
-from redis import Redis
-from redis.asyncio import Redis as AsyncRedis
+from redis import Redis, from_url as sync_redis_from_url
+from redis.asyncio import Redis as AsyncRedis, from_url as async_redis_from_url
 
 from app.core.config import settings
 
@@ -17,108 +17,124 @@ _sync_client: Optional[Redis] = None
 _async_client: Optional[AsyncRedis] = None
 
 
-def get_redis() -> Redis:
-    """Return a singleton synchronous Redis client."""
+def _mask_redis_url(url: str) -> str:
+    """Return a masked version of a Redis URL for safe logging."""
+    try:
+        parsed = urlparse(url)
+        if parsed.password:
+            return url.replace(parsed.password, "****")
+    except Exception:
+        pass
+    return url
 
+
+def get_redis() -> Optional[Redis]:
+    """
+    Return a singleton synchronous Redis client created from settings.REDIS_URL.
+
+    Uses redis.from_url which understands schemes like redis:// and rediss:// and
+    handles username/password encoded in the URL. Returns None on failure.
+    """
     global _sync_client
 
     if _sync_client is None:
+        if not settings.REDIS_URL:
+            logger.info("No REDIS_URL configured; skipping sync redis client creation.")
+            return None
 
         try:
-            # Parse the URL to extract components
-            parsed = urlparse(settings.REDIS_URL)
-
-            # Extract username and password from URL if present
-            username = parsed.username or "default"
-            password = parsed.password
-
-            # Use direct connection parameters instead of URL for Redis Cloud
-            _sync_client = Redis(
-                host=parsed.hostname or "localhost",
-                port=parsed.port or 6379,
-                username=username,
-                password=password,
+            # Use from_url so scheme and SSL are handled by the driver
+            _sync_client = sync_redis_from_url(
+                settings.REDIS_URL,
                 decode_responses=False,
                 socket_timeout=5,
                 socket_connect_timeout=5,
-                retry_on_timeout=True,
             )
 
-            # Test the connection
+            # Test connection
             try:
                 _sync_client.ping()
-                logger.info("Successfully connected to Redis")
-            except Exception as ping_error:
+                logger.info("Successfully connected to Redis (sync).")
+            except Exception as ping_err:
                 logger.warning(
-                    f"Redis ping failed: {ping_error}. Redis features may be unavailable."
+                    "Redis (sync) ping failed: %s. Redis features may be unavailable.",
+                    ping_err,
                 )
                 _sync_client = None
         except Exception as e:
-            logger.error(f"Failed to initialize Redis client: {e}")
-            logger.error(
-                f"Redis URL (masked): {settings.REDIS_URL.split('@')[0] if '@' in settings.REDIS_URL else 'REDIS_URL'}"
-            )
+            logger.error("Failed to initialize sync Redis client: %s", e)
+            logger.debug("Redis URL (masked): %s", _mask_redis_url(settings.REDIS_URL))
             _sync_client = None
 
     return _sync_client
 
 
-async def get_async_redis() -> AsyncRedis:
-    """Return a singleton asynchronous Redis client."""
+async def get_async_redis() -> Optional[AsyncRedis]:
+    """
+    Return a singleton asynchronous Redis client created from settings.REDIS_URL.
 
+    Uses redis.asyncio.from_url which supports TLS when the URL starts with rediss://.
+    Returns None on failure.
+    """
     global _async_client
 
     if _async_client is None:
-        
+        if not settings.REDIS_URL:
+            logger.info(
+                "No REDIS_URL configured; skipping async redis client creation."
+            )
+            return None
+
         try:
-            # Parse the URL to extract components
-            parsed = urlparse(settings.REDIS_URL)
-
-            # Extract username and password from URL if present
-            username = parsed.username or "default"
-            password = parsed.password
-
-            _async_client = AsyncRedis(
-                host=parsed.hostname or "localhost",
-                port=parsed.port or 6379,
-                username=username,
-                password=password,
+            _async_client = async_redis_from_url(
+                settings.REDIS_URL,
                 decode_responses=False,
                 socket_timeout=5,
                 socket_connect_timeout=5,
-                retry_on_timeout=True,
             )
 
             # Test the connection
             try:
                 await _async_client.ping()
-                logger.info("Successfully connected to Async Redis")
-            except Exception as ping_error:
+                logger.info("Successfully connected to Redis (async).")
+            except Exception as ping_err:
                 logger.warning(
-                    f"Async Redis ping failed: {ping_error}. Redis features may be unavailable."
+                    "Async Redis ping failed: %s. Redis features may be unavailable.",
+                    ping_err,
                 )
+                # If ping fails, close and clear the client so next attempt can recreate
+                try:
+                    await _async_client.aclose()
+                except Exception:
+                    pass
                 _async_client = None
         except Exception as e:
-            logger.error(f"Failed to initialize Async Redis client: {e}")
-            logger.error(
-                f"Redis URL (masked): {settings.REDIS_URL.split('@')[0] if '@' in settings.REDIS_URL else 'REDIS_URL'}"
-            )
+            logger.error("Failed to initialize async Redis client: %s", e)
+            logger.debug("Redis URL (masked): %s", _mask_redis_url(settings.REDIS_URL))
             _async_client = None
 
     return _async_client
 
 
 async def close_redis_clients() -> None:
-    """Close existing Redis connections (called on application shutdown)."""
-
+    """
+    Close existing Redis connections (called on application shutdown).
+    Handles both sync and async clients safely.
+    """
     global _sync_client, _async_client
 
     if _sync_client is not None:
-        _sync_client.close()
+        try:
+            _sync_client.close()
+        except Exception as e:
+            logger.debug("Error while closing sync redis client: %s", e)
         _sync_client = None
 
     if _async_client is not None:
-        await _async_client.aclose()
+        try:
+            await _async_client.aclose()
+        except Exception as e:
+            logger.debug("Error while closing async redis client: %s", e)
         _async_client = None
 
 

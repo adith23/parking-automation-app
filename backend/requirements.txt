@@ -1,23 +1,39 @@
-fastapi>=0.100.0
+# -------- Core Backend --------
+fastapi>=0.110.0
 uvicorn>=0.23.0
 sqlalchemy>=2.0.0
 pydantic[email]>=2.0.0
+pydantic-settings>=2.0.0
 email-validator>=2.0.0
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.3.0
-psycopg2-binary>=2.9.0
+python-multipart>=0.0.6
 python-dotenv>=1.0.0
-shapely>=2.0.0
-opencv-python>=4.8.0
-pydantic-settings>=2.0.0
-redis>=5.0.0
-twilio>=9.0.0
 geoalchemy2>=0.14.0
-python-socketio>=5.9.0
-numpy>=1.24.0
-easyocr>=1.6.0
+psycopg2-binary>=2.9.0
+
+# -------- GPU & Computer Vision --------
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
+--index-url https://download.pytorch.org/whl/cu118
 ultralytics>=8.0.0
-filterpy>=1.4.2
+easyocr>=1.7.1
+opencv-python-headless==4.10.0.84
+numpy>=1.24.0
 scipy>=1.10.0
+filterpy>=1.4.2
 
+# -------- Real-time Communication --------
+redis>=5.0.0
+python-socketio>=5.9.0
 
+# -------- Async/Streaming/RTC --------
+aiortc>=1.5.0
+aiofiles>=23.0.0
+av>=10.0.0
+
+# -------- Cloud, OCR, Utilities --------
+boto3
+twilio>=9.0.0
+google-cloud-vision

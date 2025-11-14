@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Time, JSON, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Time, JSON, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 from geoalchemy2 import Geography
@@ -15,6 +15,8 @@ class ParkingLot(Base):
     # SRID=4326 is the standard for GPS coordinates (latitude/longitude).
     gps_coordinates = Column(Geography(geometry_type="POINT", srid=4326), nullable=True)
     total_slots = Column(Integer, nullable=False)
+    is_open = Column(Boolean, nullable=False, server_default="true")
+
 
     # For simplicity, using a single price. Could be expanded to JSON for complex rates.
     price_per_hour = Column(Float, nullable=False)

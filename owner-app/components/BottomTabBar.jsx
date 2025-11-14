@@ -58,15 +58,15 @@ function getIcon(name, isFocused) {
   };
 
   switch (name) {
-    case "home":
+    case "HomeScreen":
       return <HomeIcon {...iconProps} />;
-    case "bookings":
+    case "BookingsScreen":
       return <ActivityIcon {...iconProps} />;
-    case "manage":
+    case "ManageLotsScreen":
       return <ManageIcon {...iconProps} />;
-    case "analytics":
+    case "AnalyticsScreen":
       return <AnalyticsIcon {...iconProps} />;
-    case "settings":
+    case "SettingsScreen":
       return <SettingsIcon {...iconProps} />;
     default:
       return <HomeIcon {...iconProps} />;

@@ -13,13 +13,14 @@ import {
 import Manage from "../../assets/images/oui_nav-manage.svg";
 import Lots from "../../assets/icons/Lots.svg";
 import Subs from "../../assets/icons/Subs.svg";
-import { useNavigation, useIsFocused } from "@react-navigation/native";
+import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback } from "react";
 import api from "../../services/api";
 import ParkingLotCard from "../../components/ParkingLotCard";
 
 const ManageLotsScreen = () => {
-  const navigation = useNavigation(); // Hook to navigate between screens
-  const isFocused = useIsFocused(); // Hook to detect if the screen is currently visible
+  const router = useRouter(); // Hook to navigate between screens
   const [parkingLots, setParkingLots] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,7 +38,7 @@ const ManageLotsScreen = () => {
         name: lot.name,
         total_slots: lot.total_slots,
         price_per_hour: lot.price_per_hour,
-        isEnabled: true, // Placeholder until this is in your DB
+        is_open: lot.is_open,
       }));
       setParkingLots(formattedData);
     } catch (err) {
@@ -50,19 +51,18 @@ const ManageLotsScreen = () => {
     }
   };
 
-  // useEffect to fetch data when the screen is focused (comes into view)
-  useEffect(() => {
-    if (isFocused) {
+  // useFocusEffect to fetch data when the screen is focused (comes into view)
+  useFocusEffect(
+    useCallback(() => {
       fetchParkingLots();
-    }
-  }, [isFocused]);
+    }, [])
+  );
 
-  const toggleSwitch = (id) => {
-    // This is now just a local state update.
-    // In a real app, you would make a PUT request to the backend here.
+  const handleStatusChange = (lotId, newStatus) => {
+    // Optimistically update the local state for immediate UI feedback
     setParkingLots(
       parkingLots.map((lot) =>
-        lot.id === id ? { ...lot, isEnabled: !lot.isEnabled } : lot
+        lot.id === lotId ? { ...lot, is_open: newStatus } : lot
       )
     );
   };
@@ -100,25 +100,31 @@ const ManageLotsScreen = () => {
 
       <View style={styles.container}>
         {/* Button 1: Add Parking Lots */}
-        <TouchableOpacity style={styles.button1} onPress={() => navigation.navigate("addparkinglot")}>
+        <TouchableOpacity
+          style={styles.button1}
+          onPress={() => router.push("/(screens)/AddLotScreen")}
+        >
           <Lots name="flag-plus" size={22} color="#000" />
           <Text style={styles.buttonText}>Add Parking Lots</Text>
         </TouchableOpacity>
 
         {/* Button 2: Manage Subscriptions */}
-        <TouchableOpacity style={styles.button2}>
+        <TouchableOpacity
+          style={styles.button2}
+          onPress={() => router.push("/(screens)/ManageSubscriptionsScreen")}
+        >
           <Subs name="sync-alt" size={20} color="#000" />
           <Text style={styles.buttonText}>Manage Subscriptions</Text>
         </TouchableOpacity>
       </View>
-      
+
       {/* List of Parking Lots */}
       <FlatList
         data={parkingLots}
         renderItem={({ item }) => (
           <ParkingLotCard
             item={item}
-            onValueChange={() => toggleSwitch(item.id)}
+            onStatusChange={handleStatusChange}
           />
         )}
         keyExtractor={(item) => item.id}
@@ -179,20 +185,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   container: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
     marginTop: 28,
     marginBottom: 15,
   },
   button1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFE0', // Light yellow
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFE0", // Light yellow
     paddingVertical: 15,
     paddingHorizontal: 10,
     borderRadius: 18,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -202,13 +208,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   button2: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFE0', // Light yellow
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFE0", // Light yellow
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 18,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
@@ -220,8 +226,8 @@ const styles = StyleSheet.create({
   buttonText: {
     marginLeft: 5,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontWeight: "600",
+    color: "#000",
   },
 });
 
