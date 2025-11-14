@@ -10,23 +10,25 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Image,
 } from "react-native";
+import api from "../../services/api";
+import LocationPickerModal from "../../components/LocationPickerModal";
+import Constants from "expo-constants";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { launchImageLibrary } from "react-native-image-picker";
 import Icon from "react-native-vector-icons/FontAwesome5";
 import MaterialIcon from "react-native-vector-icons/MaterialIcons";
 import Slider from "@react-native-community/slider";
-import HeaderIcon from "../assets/images/fluent_bot-add-32-regular.svg";
-import DefaultIcon from "../assets/images/hugeicons_add-02.svg";
-import Group from "../assets/images/Group.svg";
-import Vehicle from "../assets/images/fluent_vehicle-car-parking-16-regular.svg";
-import Pricing from "../assets/images/majesticons_dollar-circle-line.svg";
-import Timing from "../assets/images/mingcute_time-line.svg";
-import Info from "../assets/images/tabler_list-details.svg";
-import Camera from "../assets/images/fluent_camera-add-24-regular.svg";
-import api from "../services/api";
-import LocationPickerModal from "../components/LocationPickerModal";
-import Constants from "expo-constants";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
+import HeaderIcon from "../../assets/images/fluent_bot-add-32-regular.svg";
+import DefaultIcon from "../../assets/images/hugeicons_add-02.svg";
+import Group from "../../assets/images/Group.svg";
+import Vehicle from "../../assets/images/fluent_vehicle-car-parking-16-regular.svg";
+import Pricing from "../../assets/images/majesticons_dollar-circle-line.svg";
+import Timing from "../../assets/images/mingcute_time-line.svg";
+import Info from "../../assets/images/tabler_list-details.svg";
+import Camera from "../../assets/images/fluent_camera-add-24-regular.svg";
+
 
 const AddParkingLotScreen = () => {
   const [name, setName] = useState("");
@@ -38,8 +40,8 @@ const AddParkingLotScreen = () => {
   const [openTime, setOpenTime] = useState("");
   const [closeTime, setCloseTime] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
-  //const [photos, setPhotos] = useState([]);
-  //const [videos, setVideos] = useState([]);
+  const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -179,6 +181,43 @@ const AddParkingLotScreen = () => {
     hideCloseTimePicker();
   };
 
+  const handleChooseMedia = (mediaType) => {
+    const options = {
+      mediaType: mediaType,
+      quality: 0.8,
+      selectionLimit: 5,
+    };
+
+    launchImageLibrary(options, (response) => {
+      if (response.didCancel) {
+        console.log("User cancelled media picker");
+      } else if (response.errorCode) {
+        console.log("ImagePicker Error: ", response.errorMessage);
+        Alert.alert(
+          "Picker Error",
+          `Could not select media. Please check permissions. Error: ${response.errorMessage}`
+        );
+      } else {
+        if (response.assets) {
+          const newUris = response.assets.map((asset) => asset.uri);
+          if (mediaType === "photo") {
+            setPhotos((prevPhotos) => [...prevPhotos, ...newUris]);
+          } else {
+            setVideos((prevVideos) => [...prevVideos, ...newUris]);
+          }
+        }
+      }
+    });
+  };
+
+  const handleRemoveMedia = (index, mediaType) => {
+    if (mediaType === "photo") {
+      setPhotos(photos.filter((_, i) => i !== index));
+    } else {
+      setVideos(videos.filter((_, i) => i !== index));
+    }
+  };
+
   const handleSubmit = async () => {
     if (!name || !address) {
       Alert.alert(
@@ -211,6 +250,10 @@ const AddParkingLotScreen = () => {
       additional_info: {
         rules_and_regulations: additionalInfo,
       },
+      media_urls: {
+        photos: photos,
+        videos: videos,
+      },
     };
 
     try {
@@ -225,6 +268,8 @@ const AddParkingLotScreen = () => {
       setOpenTime("06:00");
       setCloseTime("18:00");
       setAdditionalInfo("");
+      setPhotos([]);
+      setVideos([]);
       setSuggestions([]);
       setShowSuggestions(false);
     } catch (error) {
@@ -469,7 +514,6 @@ const AddParkingLotScreen = () => {
                   {closeTime || "HH:MM"}
                 </Text>
               </TouchableOpacity>
-              
             </View>
           </View>
         </View>
@@ -497,14 +541,58 @@ const AddParkingLotScreen = () => {
             <Camera name="photo-camera" size={20} color="#555" />
             <Text style={styles.cardTitle}>Add Photos & Videos</Text>
           </View>
-          <View style={styles.mediaContainer}>
-            <TouchableOpacity style={styles.mediaButton}>
-              <MaterialIcon name="add-a-photo" size={32} color="#555" />
+
+          {/* Photo Picker */}
+          <Text style={styles.mediaLabel}>Photos</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.mediaScrollView}
+          >
+            <TouchableOpacity
+              style={styles.addMediaButton}
+              onPress={() => handleChooseMedia("photo")}
+            >
+              <MaterialIcon name="add-a-photo" size={40} color="#555" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.mediaButton}>
-              <MaterialIcon name="videocam" size={32} color="#555" />
+            {photos.map((uri, index) => (
+              <View key={index} style={styles.mediaThumbnailContainer}>
+                <Image source={{ uri }} style={styles.mediaThumbnail} />
+                <TouchableOpacity
+                  style={styles.removeMediaButton}
+                  onPress={() => handleRemoveMedia(index, "photo")}
+                >
+                  <Icon name="times-circle" size={22} color="#000" solid />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+
+          {/* Video Picker */}
+          <Text style={styles.mediaLabel}>Videos</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.mediaScrollView}
+          >
+            <TouchableOpacity
+              style={styles.addMediaButton}
+              onPress={() => handleChooseMedia("video")}
+            >
+              <MaterialIcon name="videocam" size={40} color="#555" />
             </TouchableOpacity>
-          </View>
+            {videos.map((uri, index) => (
+              <View key={index} style={styles.mediaThumbnailContainer}>
+                <Image source={{ uri }} style={styles.mediaThumbnail} />
+                <TouchableOpacity
+                  style={styles.removeMediaButton}
+                  onPress={() => handleRemoveMedia(index, "video")}
+                >
+                  <Icon name="times-circle" size={22} color="#000" solid />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Submit Button */}
@@ -764,18 +852,46 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: "#333",
   },
-  mediaContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+  mediaLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#444",
+    marginBottom: 8,
     marginTop: 10,
   },
-  mediaButton: {
-    backgroundColor: "#f0f0f0",
-    padding: 20,
-    borderRadius: 15,
-    width: "45%",
-    alignItems: "center",
+  mediaScrollView: {
+    marginBottom: 10,
+  },
+  mediaThumbnailContainer: {
+    marginRight: 10,
+    marginTop: 4,
+    position: "relative",
+  },
+  mediaThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: "#e0e0e0",
+  },
+  videoPlaceholder: {
     justifyContent: "center",
+    alignItems: "center",
+  },
+  removeMediaButton: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+  },
+  addMediaButton: {
+    width: 200,
+    height: 90,
+    borderRadius: 20,
+    backgroundColor: "#f0f0f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
   },
   submitButton: {
     backgroundColor: "#FFFC35",
@@ -785,6 +901,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
     alignSelf: "center",
+    marginBottom: 35,
   },
   submitButtonText: {
     fontSize: 18,

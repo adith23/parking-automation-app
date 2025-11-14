@@ -11,7 +11,7 @@ class OwnerBookingResponse(BaseModel):
     parking_lot_id: int
     parking_lot_name: str
     lot: str  # Alias for frontend
-    parking_slot_id: int
+    parking_slot_id: Optional[int] = None
     slot_number: Optional[str] = None
     status: str
     booked_at: Optional[datetime] = None

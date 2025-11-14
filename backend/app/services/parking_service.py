@@ -15,7 +15,9 @@ from app.schemas.owner_schemas.parking_lot_schema import (
     ParkingLotResponse,
     ParkingLotUpdate,
     GpsCoordinates,
+    ParkingLotStatusUpdate,
 )
+
 
 class ParkingService:
     def __init__(self):
@@ -131,7 +133,7 @@ class ParkingService:
                 status_code=status.HTTP_404_NOT_FOUND, detail="Parking lot not found"
             )
 
-        if cast(int, parking_lot.owner_id != owner_id) != owner_id:
+        if parking_lot.owner_id != owner_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized to access this parking lot",
@@ -168,6 +170,20 @@ class ParkingService:
         db.refresh(db_parking_lot)
 
         return db_parking_lot
+
+    def update_parking_lot_status(
+        self, parking_lot_id: int, owner_id: int, is_open: bool, db: Session
+    ) -> parking_model.ParkingLot:
+        """
+        Update a parking lot's open/close status.
+        """
+        db_parking_lot = self.get_parking_lot(parking_lot_id, owner_id, db)
+        db_parking_lot.is_open = is_open
+        db.add(db_parking_lot)
+        db.commit()
+        db.refresh(db_parking_lot)
+        return db_parking_lot
+
 
 
 '''

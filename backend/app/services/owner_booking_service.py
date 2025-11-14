@@ -1,7 +1,7 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from app.models.driver_models.booking_model import Booking, BookingStatus
@@ -179,7 +179,7 @@ class OwnerBookingService:
                 booking_data = self._format_booking_response(booking, parking_lot, parking_slot)
                 # Add session-specific data
                 booking_data["start_time"] = session.start_time
-                duration_minutes = (datetime.utcnow() - session.start_time).total_seconds() / 60.0
+                duration_minutes = (datetime.now(timezone.utc) - session.start_time).total_seconds() / 60.0
                 booking_data["total_duration_minutes"] = duration_minutes
                 
                 # Format duration string
@@ -199,7 +199,7 @@ class OwnerBookingService:
                 session_data = self._format_session_response(session, parking_lot, parking_slot, None)
                 booking_data = session_data
                 # Calculate current cost and duration for active session
-                duration_minutes = (datetime.utcnow() - session.start_time).total_seconds() / 60.0
+                duration_minutes = (datetime.now(timezone.utc) - session.start_time).total_seconds() / 60.0
                 booking_data["total_duration_minutes"] = duration_minutes
                 
                 # Format duration string

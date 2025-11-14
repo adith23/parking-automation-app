@@ -2,16 +2,12 @@
 import cv2
 import json
 import numpy as np
-import os # Import the os module for robust path handling
+import os 
 
 # --- Configuration ---
-# Get the directory where this script is located
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Build robust paths relative to this script's location
-# Video is in 'backend/', script is in 'backend/app/services/'
+script_dir = os.path.dirname(os.path.abspath(__file__))
 VIDEO_SOURCE = os.path.join(script_dir, '..', '..', 'sample_video3.mp4')
-# Save the slots file in the 'backend/' directory
 SLOTS_FILE = os.path.join(script_dir, '..', '..', 'parking_slots.json')
 WINDOW_NAME = 'Define Parking Slots'
 
@@ -62,9 +58,6 @@ def save_slots():
         # Convert numpy array back to list of lists for GeoJSON
         coords_list = poly_np_array.reshape(-1, 2).tolist()
         
-        # GeoJSON polygons require the first and last coordinate to be identical to close the loop.
-        # Ensure this, as `cv2.polylines` with `isClosed=True` handles this internally for drawing
-        # but GeoJSON specification often expects it explicitly.
         if coords_list and coords_list[0] != coords_list[-1]:
             coords_list.append(coords_list[0])
 

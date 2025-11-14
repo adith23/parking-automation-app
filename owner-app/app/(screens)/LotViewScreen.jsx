@@ -7,26 +7,22 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { useLocalSearchParams, Stack, useRouter } from "expo-router";
-import api from "../services/api";
+import { useLocalSearchParams, Stack } from "expo-router";
+import api from "../../services/api";
 
-const SlotDefinitionScreen = () => {
-  const router = useRouter();
+const LotViewScreen = () => {
   const { parkingLotId, parkingLotName } = useLocalSearchParams();
 
-  // --- IMPORTANT ---
-  // Replace 'YOUR_BACKEND_IP' with the actual IP address of your computer on your local network.
-  // - Android Emulator: '10.0.2.2'
-  // - iOS Simulator: 'localhost'
-  // - Physical Device: Your computer's local IP (e.g., 192.168.1.100)
-  const uri = `${api.defaults.baseURL}/owner/slot-definitions/${parkingLotId}/define-slots-ui`;
+  const uri = `${api.defaults.baseURL}/owner/parking-lots-view/${parkingLotId}/live-view-ui`;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen
         options={{
-          title: `Map Slots: ${parkingLotName}`,
+          title: `Live View: ${parkingLotName}`,
           headerBackTitle: "Back",
+          headerStyle: { backgroundColor: "#000" },
+          headerTintColor: "#fff",
         }}
       />
       <WebView
@@ -35,8 +31,7 @@ const SlotDefinitionScreen = () => {
         startInLoadingState={true}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#000" />
-            <Text>Loading Mapping Tool...</Text>
+            <ActivityIndicator size="large" color="#fff" />
           </View>
         )}
       />
@@ -47,16 +42,18 @@ const SlotDefinitionScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#000",
   },
   webview: {
     flex: 1,
+    backgroundColor: "#000",
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#000",
   },
 });
 
-export default SlotDefinitionScreen;
+export default LotViewScreen;

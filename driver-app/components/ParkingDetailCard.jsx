@@ -218,12 +218,12 @@ const ParkingDetailCard = ({
 
       {/* Address */}
       {parkingLot.address && (
-        <View style={styles.addressContainer}>
-          <MaterialIcon name="location-on" size={20} color="#666" />
-          <Text style={styles.address} numberOfLines={2}>
-            {parkingLot.address}
-          </Text>
-        </View>
+      <View style={styles.addressContainer}>
+        <MaterialIcon name="location-on" size={20} color="#666" />
+        <Text style={styles.address} numberOfLines={2}>
+          {parkingLot.address}
+        </Text>
+      </View>
       )}
 
       {/* Availability */}

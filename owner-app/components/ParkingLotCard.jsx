@@ -1,19 +1,26 @@
 import React from "react";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View, Switch, TouchableOpacity } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Switch,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import Edit from "../assets/images/edit.svg";
 import MapView from "../assets/images/mapview.svg";
 import LotView from "../assets/images/lotview.svg";
+import api from "../services/api";
 
-const ParkingLotCard = ({ item, onValueChange }) => {
+const ParkingLotCard = ({ item, onStatusChange }) => {
   const router = useRouter();
-  const isEnabled = item.isEnabled ?? true;
-  const status = isEnabled ? "Open Now" : "Closed Now";
-  const isOpen = status === "Open Now";
+  const isOpen = item.is_open;
+  const status = isOpen ? "Open Now" : "Closed Now";
 
   const handleDefineSlots = () => {
     router.push({
-      pathname: "/slotDefinition",
+      pathname: "/(screens)/SlotDefinitionScreen",
       params: {
         parkingLotId: item.id,
         parkingLotName: item.name,
@@ -23,12 +30,36 @@ const ParkingLotCard = ({ item, onValueChange }) => {
 
   const handleLotView = () => {
     router.push({
-      pathname: "/lotView",
+      pathname: "/(screens)/LotViewScreen",
       params: {
         parkingLotId: item.id,
         parkingLotName: item.name,
       },
     });
+  };
+
+  const handleEdit = () => {
+    router.push({
+      pathname: "/(screens)/EditLotScreen",
+      params: { parkingLotId: item.id },
+    });
+  };
+
+  const toggleSwitch = async () => {
+    const newStatus = !item.is_open;
+    // Optimistically update UI
+    onStatusChange(item.id, newStatus);
+
+    try {
+      await api.patch(`/owner/parking-lots/${item.id}/status`, {
+        is_open: newStatus,
+      });
+    } catch (error) {
+      console.error("Failed to update status:", error);
+      // Revert UI on error
+      onStatusChange(item.id, item.is_open);
+      Alert.alert("Error", "Could not update the parking lot status.");
+    }
   };
 
   return (
@@ -74,7 +105,7 @@ const ParkingLotCard = ({ item, onValueChange }) => {
       </View>
 
       <View style={styles.cardActions}>
-        <TouchableOpacity style={styles.editButton}>
+        <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
           <Edit name="pencil-alt" size={40} color="#333" />
         </TouchableOpacity>
 
@@ -82,7 +113,7 @@ const ParkingLotCard = ({ item, onValueChange }) => {
           style={[
             styles.switchContainer,
             {
-              backgroundColor: item.isEnabled ? "#FFFC35" : "#ffffffff",
+              backgroundColor: item.is_open ? "#FFFC35" : "#ffffffff",
               borderWidth: 1.5,
               borderColor: "#000",
             },
@@ -92,8 +123,8 @@ const ParkingLotCard = ({ item, onValueChange }) => {
             trackColor={{ false: "#ffffffff", true: "#FFFC35" }}
             thumbColor="#000000ff"
             ios_backgroundColor="#ffffffff"
-            onValueChange={onValueChange}
-            value={item.isEnabled}
+            onValueChange={toggleSwitch}
+            value={item.is_open}
             style={styles.switch}
           />
         </View>

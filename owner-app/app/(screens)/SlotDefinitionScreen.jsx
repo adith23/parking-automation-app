@@ -7,23 +7,20 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import { useLocalSearchParams, Stack } from "expo-router";
-import api from "../services/api";
+import { useLocalSearchParams, Stack, useRouter } from "expo-router";
+import api from "../../services/api";
 
-const LotViewScreen = () => {
+const SlotDefinitionScreen = () => {
   const { parkingLotId, parkingLotName } = useLocalSearchParams();
 
-  // --- IMPORTANT: Use your backend IP ---
-  const uri = `${api.defaults.baseURL}/owner/parking-lots-view/${parkingLotId}/live-view-ui`;
+  const uri = `${api.defaults.baseURL}/owner/slot-definitions/${parkingLotId}/define-slots-ui`;
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <Stack.Screen
         options={{
-          title: `Live View: ${parkingLotName}`,
+          title: `Map Slots: ${parkingLotName}`,
           headerBackTitle: "Back",
-          headerStyle: { backgroundColor: "#000" },
-          headerTintColor: "#fff",
         }}
       />
       <WebView
@@ -32,7 +29,8 @@ const LotViewScreen = () => {
         startInLoadingState={true}
         renderLoading={() => (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#fff" />
+            <ActivityIndicator size="large" color="#000" />
+            <Text>Loading Mapping Tool...</Text>
           </View>
         )}
       />
@@ -43,18 +41,16 @@ const LotViewScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#000",
+    backgroundColor: "#fff",
   },
   webview: {
     flex: 1,
-    backgroundColor: "#000",
   },
   loadingContainer: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#000",
   },
 });
 
-export default LotViewScreen;
+export default SlotDefinitionScreen;

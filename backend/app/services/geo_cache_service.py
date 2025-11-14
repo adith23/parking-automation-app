@@ -54,9 +54,9 @@ async def _publish_initial_availability() -> None:
     db = SessionLocal()
     try:
         rows = db.query(
-            ParkingSlot.parking_lot_id,
-            ParkingSlot.status,
-            ParkingSlot.id,
+                ParkingSlot.parking_lot_id,
+                ParkingSlot.status,
+                ParkingSlot.id,
         ).all()
         availability: dict[int, dict[str, int]] = {}
         for lot_id, status, _ in rows:

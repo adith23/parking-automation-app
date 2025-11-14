@@ -39,4 +39,9 @@ const getUser = async () => {
   return user ? JSON.parse(user) : null;
 };
 
-export default { login, register, logout, getToken, getUser };
+// Update user info in storage
+const updateUser = async (userData) => {
+  await AsyncStorage.setItem("user", JSON.stringify(userData));
+};
+
+export default { login, register, logout, getToken, getUser, updateUser };

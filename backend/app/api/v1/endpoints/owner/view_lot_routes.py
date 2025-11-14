@@ -1,30 +1,46 @@
 import cv2
 import os
+import json
 import numpy as np
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, WebSocket
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
-from geoalchemy2.shape import to_shape  
+from geoalchemy2.shape import to_shape
+from aiortc import RTCPeerConnection, RTCSessionDescription
+import logging
+
 from app.core.database import get_db
 from app import models
-from app.services.computer_vision_services.computer_vision_service import ComputerVisionService
+from app.models.owner_models.parking_lot_model import ParkingLot
+from app.services.computer_vision_services.computer_vision_service import (
+    ComputerVisionService,
+)
+from app.services.webrtc_service import webrtc_manager, WebRTCVideoTrack
+
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 script_dir = os.path.dirname(__file__)
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
-def generate_processed_frames(parking_lot_id: int, db: Session):
+
+async def _initialize_cv_service(parking_lot_id: int, db: Session):
+    """Initialize computer vision service with slot definitions from database."""
     lot = (
         db.query(models.owner_models.ParkingLot)
         .filter(models.owner_models.ParkingLot.id == parking_lot_id)
         .first()
     )
+
+    if not lot:
+        raise HTTPException(status_code=404, detail="Parking lot not found")
+
     # Use placeholder video if not specified in DB
     video_path = r"C:\Users\Adithya\Downloads\sample_video4.mp4"
 
     if not os.path.exists(video_path):
-        raise ConnectionError("Video source not found.")
+        raise HTTPException(status_code=404, detail="Video source not found")
 
     # Fetch slot polygons from the database and convert them for OpenCV
     db_slots = (
@@ -48,42 +64,105 @@ def generate_processed_frames(parking_lot_id: int, db: Session):
         )
 
     cv_service = ComputerVisionService(slot_definitions)
+    return cv_service, video_path
 
-    cap = cv2.VideoCapture(video_path)
-    while cap.isOpened():
-        success, frame = cap.read()
-        if not success:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            continue
 
-        # Process the frame to get all drawings
-        processed_frame = cv_service.process_frame(frame)
+@router.websocket("/ws/{parking_lot_id}/live-view")
+async def websocket_live_view(
+    websocket: WebSocket, parking_lot_id: int, db: Session = Depends(get_db)
+):
+    """
+    WebRTC endpoint for live parking lot viewing.
+    Accepts WebRTC offer, returns answer with video track.
+    """
+    await websocket.accept()
 
-        ret, buffer = cv2.imencode(".jpg", processed_frame)
-        if not ret:
-            continue
+    session_id = f"live-view-{parking_lot_id}"
+    pc = RTCPeerConnection()
+    video_source = None
 
-        frame_bytes = buffer.tobytes()
-        yield (
-            b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
+    try:
+        # Initialize computer vision service
+        cv_service, video_path = await _initialize_cv_service(parking_lot_id, db)
+
+        # Create a dedicated video source for this client session
+        # (Don't share video sources between clients to avoid queue conflicts)
+        from app.services.webrtc_service import VideoTrackSource
+        video_source = VideoTrackSource(
+            video_path=video_path,
+            frame_processor=cv_service.process_frame,
+            fps=30,
         )
-    cap.release()
 
+        # Start the video source (create queue in async context)
+        await video_source.start()
 
-@router.get("/{parking_lot_id}/live-view-stream", summary="Stream processed video feed")
-async def live_view_stream(parking_lot_id: int, db: Session = Depends(get_db)):
-    return StreamingResponse(
-        generate_processed_frames(parking_lot_id, db),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+        # Create and add video track
+        video_track = WebRTCVideoTrack(
+            track_id=f"video-{session_id}",
+            video_source=video_source,
+        )
+        pc.addTrack(video_track)
+
+        # Create session record
+        webrtc_manager.create_session(session_id, parking_lot_id)
+        logger.info(f"✅ WebRTC session created: {session_id}")
+
+        # Handle incoming WebRTC offer
+        data = await websocket.receive_text()
+        offer_data = json.loads(data)
+
+        offer = RTCSessionDescription(sdp=offer_data["sdp"], type=offer_data["type"])
+
+        # Set remote description and create answer
+        await pc.setRemoteDescription(offer)
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+
+        # Send answer back to client
+        await websocket.send_text(
+            json.dumps({"type": "answer", "sdp": pc.localDescription.sdp})
+        )
+
+        logger.info(f"✅ WebRTC answer sent for session: {session_id}")
+
+        # Keep connection alive
+        while True:
+            try:
+                await websocket.receive_text()
+            except Exception as e:
+                logger.info(f"WebSocket connection closed for {session_id}: {e}")
+                break
+
+    except Exception as e:
+        logger.error(f"❌ Error in live view WebRTC: {e}")
+        await websocket.send_text(json.dumps({"error": str(e)}))
+
+    finally:
+        # Clean up
+        if video_source:
+            await video_source.stop()
+        webrtc_manager.remove_session(session_id)
+        await pc.close()
+        logger.info(f"✅ WebRTC session closed: {session_id}")
+
 
 @router.get("/{parking_lot_id}/live-view-ui", response_class=HTMLResponse)
-async def get_live_view_page(parking_lot_id: int):
-    html_path = os.path.join(TEMPLATES_PATH, "live_view.html")
-    if not os.path.exists(html_path):
-        raise HTTPException(status_code=404, detail="HTML template not found.")
+async def get_live_view_page(parking_lot_id: int, db: Session = Depends(get_db)):
+    """Serve the HTML page for live parking lot viewing"""
+    try:    
+        parking_lot = (
+            db.query(ParkingLot).filter(ParkingLot.id == parking_lot_id).first()
+        )
 
-    with open(html_path, "r") as f:
-        html_content = f.read().replace("{{ parking_lot_id }}", str(parking_lot_id))
+        if not parking_lot:
+            raise HTTPException(status_code=404, detail="Parking lot not found")
 
-    return HTMLResponse(content=html_content)
+        template_path = os.path.join(TEMPLATES_PATH, "live_view.html")
+        with open(template_path, "r", encoding="utf-8") as f:
+            html_content = f.read().replace("{{ parking_lot_id }}", str(parking_lot_id))
+
+        return html_content
+    except Exception as e:
+        logger.error(f"Error serving live view page: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to load live view page")

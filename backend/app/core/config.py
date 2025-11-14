@@ -1,10 +1,16 @@
 from pydantic_settings import BaseSettings
 from typing import List, Optional
-
+import os
 
 class Settings(BaseSettings):
     # Database
-    DATABASE_URL: str = "postgresql://postgres:pass1234@localhost:5432/ParkingSystem"
+    DATABASE_URL: str = os.getenv(
+        "DATABASE_URL",
+        "postgresql://postgres:changeme@localhost:5432/parking_db"
+    )
+
+    # Google Cloud Vision
+    GOOGLE_APPLICATION_CREDENTIALS: str | None = None
 
     # Redis / Socket.IO
     REDIS_URL: str = "redis://localhost:6379/0"
