@@ -1,5 +1,5 @@
 # NVIDIA CUDA Base (GPU)
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04 AS base
+FROM python:3.10-slim-bullseye AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -9,9 +9,6 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        python3 \
-        python3-pip \
-        python3-venv \
         build-essential \
         libgl1 \
         libglib2.0-0 \
@@ -20,11 +17,6 @@ RUN apt-get update && \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Make python3 default
-RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1 && \
-    update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-
-
 # Install Python Deps
 FROM base AS python-deps
 
@@ -32,10 +24,10 @@ COPY requirements.txt .
 
 # Install PyTorch with GPU support first
 RUN pip install --no-cache-dir \
-    torch==2.3.1+cu118 \
-    torchvision==0.18.1+cu118 \
-    torchaudio==2.3.1+cu118 \
-    --extra-index-url https://download.pytorch.org/whl/cu118
+    torch==2.3.1 \
+    torchvision==0.18.1 \
+    torchaudio==2.3.1 \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Install the rest of the Python dependencies from PyPI
 RUN pip install --no-cache-dir -r requirements.txt
