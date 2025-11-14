@@ -32,12 +32,13 @@ COPY requirements.txt .
 
 # Install PyTorch CUDA 11.8 FIRST (GPU)
 RUN pip install --no-cache-dir \
+    --index-url https://download.pytorch.org/whl/cu118 \
     torch==2.3.1 \
     torchvision==0.18.1 \
     torchaudio==2.3.1 \
-    --index-url https://download.pytorch.org/whl/cu118
+    --extra-index-url https://pypi.org/simple
 
-# Install all other dependencies
+# Install the rest of the Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Final Runtime Image
