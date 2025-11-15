@@ -5,5 +5,9 @@ from app.models.driver_models.parking_session_model import ParkingSession
 from app.models.driver_models.vehicle_model import Vehicle
 from app.models.owner_models.owner_model import ParkingLotOwner
 from app.models.owner_models.parking_lot_model import ParkingLot
-from app.models.owner_models.parking_slot_model import ParkingSlot, SlotDefinition
-from app.models.owner_models.subscription_model import SubscriptionPlan, OwnerSubscription
+from app.models.owner_models.parking_slot_model import ParkingSlot
+from app.models.owner_models.subscription_model import (
+    SubscriptionPlan,
+    DriverSubscription,
+    SubscriptionUsage,
+)
