@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
-
+from starlette.concurrency import run_in_threadpool
 from .core.config import settings
 from .core.redis import close_redis_clients
 from .core.socket_manager import socket_app
