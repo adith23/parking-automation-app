@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings
 from typing import List, Optional
 import boto3
 import os
+import json
+import sys
 
 # AWS Secrets Manager Integration
 secrets_arn = os.getenv("SECRETS_ARN")
