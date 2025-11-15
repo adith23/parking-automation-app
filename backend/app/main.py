@@ -11,11 +11,17 @@ from .api.v1.api_routes import api_router
 from .services.geo_cache_service import start_geo_cache_tasks, stop_geo_cache_tasks
 import app.models.base
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     # ---- Create DB Tables on startup ----
-    Base.metadata.create_all(bind=engine)
+    print("INFO:     Creating database tables...")
+    try:
+        # Run the synchronous create_all in a thread pool
+        await run_in_threadpool(Base.metadata.create_all, bind=engine)
+        print("INFO:     Database tables created successfully.")
+    except Exception as e:
+        print(f"FATAL:    Error creating database tables: {e}")
 
     # ---- Start background tasks ----
     geo_tasks = await start_geo_cache_tasks()
