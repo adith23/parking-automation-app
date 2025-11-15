@@ -7,7 +7,6 @@ from .config import settings
 # Database connection:
 DATABASE_URL = settings.DATABASE_URL
 
-
 engine = create_engine(
     DATABASE_URL,
     future=True,

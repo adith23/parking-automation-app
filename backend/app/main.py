@@ -11,7 +11,6 @@ from .api.v1.api_routes import api_router
 from .services.geo_cache_service import start_geo_cache_tasks, stop_geo_cache_tasks
 import app.models.base
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
