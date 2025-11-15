@@ -5,16 +5,28 @@ import os
 
 # AWS Secrets Manager Integration
 secrets_arn = os.getenv("SECRETS_ARN")
+aws_region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+
 if secrets_arn:
     print("Found SECRETS_ARN, attempting to fetch secrets from AWS Secrets Manager...")
-    session = boto3.session.Session()
-    client = session.client(service_name="secretsmanager")
+
+    if not aws_region:
+        print("ERROR: SECRETS_ARN is set but AWS_REGION is missing.")
+        print("Solution: Add AWS_REGION to ECS task or .env during local tests.")
+        sys.exit(1)
+
     try:
-        get_secret_value_response = client.get_secret_value(SecretId=secrets_arn)
-        secret = get_secret_value_response["SecretString"]
+        session = boto3.session.Session(region_name=aws_region)
+        client = session.client(service_name="secretsmanager")
+
+        secret_response = client.get_secret_value(SecretId=secrets_arn)
+        secret = secret_response["SecretString"]
+
         aws_secrets = json.loads(secret)
         os.environ.update(aws_secrets)
+
         print("Successfully loaded secrets into environment.")
+
     except Exception as e:
         print(f"FATAL: Could not fetch secrets from AWS Secrets Manager: {e}")
         sys.exit(1)
