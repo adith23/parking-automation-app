@@ -10,12 +10,11 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome5";
+import MainLogo2 from "../../assets/icons/MainLogo2.svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
-
-// --- Reusable Components ---
 
 // Card for "Recent Bookings"
 const BookingCard = ({ icon, driver, location, status, amount }) => {
@@ -54,13 +53,13 @@ const BookingCard = ({ icon, driver, location, status, amount }) => {
 };
 
 // Card for "Today Revenue Insights"
-const InsightCard = ({ icon, title, value, isMain, iconPack }) => {
+const InsightCard = ({ icon, title, value, isMain, iconPack, customTextStyle }) => {
   const IconComponent = iconPack === "FontAwesome5" ? Icon : Icon;
   return (
     <View style={isMain ? styles.insightCardMain : styles.insightCard}>
       <View style={styles.insightHeader}>
         <IconComponent name={icon} size={isMain ? 20 : 18} color="#333" />
-        <Text style={styles.insightTitle}>{title}</Text>
+        <Text style={[styles.insightTitle, customTextStyle]}>{title}</Text>
       </View>
       {isMain ? (
         <View style={styles.insightMainContent}>
@@ -179,8 +178,7 @@ const HomeScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.logoContainer}>
-            <Icon name="car" size={24} color="#000" />
-            <Text style={styles.logoText}>EasyPark</Text>
+            <MainLogo2 width={200} height={90} />
           </View>
           <TouchableOpacity style={styles.bellButton}>
             <Icon name="bell" size={24} color="#333" solid />
@@ -245,8 +243,9 @@ const HomeScreen = () => {
                 />
                 <InsightCard
                   icon="credit-card"
-                  title="Subscriptions"
+                  title="Subscription"
                   value={String(analytics.subscription_count)}
+                  customTextStyle={styles.insightTitleSubscription}
                 />
               </View>
               <InsightCard
@@ -299,14 +298,14 @@ const HomeScreen = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    backgroundColor: "#FFFFE0", // Light yellow
+    backgroundColor: "#FFFD90",
     padding: 20,
-    paddingTop: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingTop: 50,
+    borderBottomLeftRadius: 60,
+    borderBottomRightRadius: 60,
   },
   headerTop: {
     flexDirection: "row",
@@ -317,18 +316,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
-    borderRadius: 20,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-  },
-  logoText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginLeft: 8,
+    borderRadius: 40,
+    marginLeft: 60,
+    paddingTop: 5,
+    paddingLeft: 20,
   },
   bellButton: {
-    backgroundColor: "#fff",
+    backgroundColor: "#E8EFF3",
     width: 44,
     height: 44,
     borderRadius: 22,
@@ -339,21 +333,25 @@ const styles = StyleSheet.create({
     fontSize: 22,
     color: "#555",
     marginTop: 20,
+    marginLeft: 15,
   },
   welcomeName: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#333",
+    marginLeft: 15,
+    marginBottom: 6,
   },
   scrollContainer: {
     padding: 20,
-    paddingBottom: 80, // Space for nav bar
+    paddingBottom: 80,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 10,
+    marginLeft: 5,
   },
   emptyBookingCard: {
     backgroundColor: "#fff",
@@ -362,36 +360,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 15,
-  },
-  emptyBookingText: {
-    fontSize: 16,
-    color: "#888",
-  },
-  bookingCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 2,
   },
+  emptyBookingText: {
+    fontSize: 16,
+    color: "#888",
+  },
+  bookingCard: {
+    backgroundColor: "#FFFEC7",
+    borderRadius: 25,
+    padding: 15,
+    paddingLeft: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 15,
+  },
   bookingInfo: {
     flex: 1,
     marginLeft: 15,
   },
   bookingDriver: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
     color: "#333",
   },
   bookingLocation: {
-    fontSize: 14,
+    fontSize: 16,
     color: "#555",
+    fontWeight: 600,
     marginVertical: 2,
   },
   bookingStatusContainer: {
@@ -429,9 +429,9 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   revenueCard: {
-    backgroundColor: "#FFFFE0",
-    borderRadius: 20,
-    padding: 15,
+    backgroundColor: "#FFFD90",
+    borderRadius: 30,
+    padding: 22,
     marginTop: 10,
   },
   revenueTitle: {
@@ -439,44 +439,59 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#333",
     marginBottom: 15,
+    marginLeft: 8,
   },
   revenueRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 15,
+    gap: 13,
     marginBottom: 15,
   },
   insightCard: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
+    backgroundColor: "#FFFFE0",
+    borderRadius: 22,
+    padding: 6,
+    paddingLeft: 15,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   insightCardMain: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 15,
+    backgroundColor: "#FFFFE0",
+    borderRadius: 24,
+    padding: 8,
+    paddingLeft: 12,
+    paddingTop: 16,
+    paddingBottom: 16,
+    alignItems: "center",
   },
   insightHeader: {
     flexDirection: "row",
     alignItems: "center",
   },
   insightTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#555",
-    marginLeft: 8,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+    marginLeft: 9,
+    marginRight: 9,
+  },
+  insightTitleSubscription: {
+    fontSize: 16,
+    paddingRight: 3,
+    marginRight: 9,
   },
   insightValue: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#333",
-    marginTop: 8,
+    marginTop: 10,
+    marginLeft: 48,
   },
   insightMainContent: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 22,
   },
   insightMainValue: {
     fontSize: 22,
@@ -485,7 +500,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   mapSectionCard: {
-    backgroundColor: "#FFFFE0",
+    backgroundColor: "#FFFD90",
     borderRadius: 20,
     padding: 15,
     marginTop: 20,
@@ -509,6 +524,7 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
+  
   // --- Custom Marker Styles ---
   markerContainer: {
     alignItems: "center",

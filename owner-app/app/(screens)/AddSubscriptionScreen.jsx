@@ -190,18 +190,11 @@ const AddSubscriptionScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Icon name="box-open" size={24} color="#FFD700" />
+        <Icon name="box-open" size={24} color="#FFFC35" />
         <Text style={styles.headerTitle}>Add Subscription</Text>
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: bottomPadding },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
         {/* Subscription Name */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
@@ -211,6 +204,7 @@ const AddSubscriptionScreen = () => {
           <TextInput
             style={styles.input}
             placeholder="Subscription Name"
+            placeholderTextColor="#5E5E5E"
             value={name}
             onChangeText={setName}
           />
@@ -221,10 +215,7 @@ const AddSubscriptionScreen = () => {
           <View style={styles.cardHeader}>
             <MaterialIcon name="location-pin" size={20} color="#333" />
             <View style={styles.cardTitleContainer}>
-              <Text style={styles.cardTitle}>Parking Lot (Optional)</Text>
-              <Text style={styles.optionalText}>
-                Leave unselected for general plan
-              </Text>
+              <Text style={styles.cardTitle}>Parking Lots</Text>
             </View>
           </View>
 
@@ -278,7 +269,10 @@ const AddSubscriptionScreen = () => {
               ) : parkingLots.length === 0 ? (
                 <Text style={styles.emptyText}>No parking lots available</Text>
               ) : (
-                <View style={styles.lotsScrollContainer}>
+                <ScrollView
+                  style={styles.parkingLotsList}
+                  nestedScrollEnabled={true}
+                >
                   {parkingLots.map((item) => (
                     <ParkingLotItem
                       key={item.id.toString()}
@@ -289,7 +283,7 @@ const AddSubscriptionScreen = () => {
                       onSelect={() => handleLotSelect(item.id, item.name)}
                     />
                   ))}
-                </View>
+                </ScrollView>
               )}
             </View>
           )}
@@ -337,30 +331,36 @@ const AddSubscriptionScreen = () => {
           <View style={styles.halfCard}>
             <View style={styles.cardHeader}>
               <Icon name="dollar-sign" size={20} color="#333" />
-              <Text style={styles.cardTitle}>Monthly Pricing</Text>
+              <Text style={styles.cardTitlePricing}>Monthly Pricing</Text>
             </View>
-            <TextInput
-              style={styles.input}
-              value={monthlyPrice}
-              onChangeText={setMonthlyPrice}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor="#999"
-            />
+            <View style={styles.priceInputContainer}>
+              <Text style={styles.currencySymbol}>Rs.</Text>
+              <TextInput
+                style={styles.priceInput}
+                value={monthlyPrice}
+                onChangeText={setMonthlyPrice}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
           <View style={styles.halfCard}>
             <View style={styles.cardHeader}>
               <Icon name="dollar-sign" size={20} color="#333" />
-              <Text style={styles.cardTitle}>Annual Pricing</Text>
+              <Text style={styles.cardTitlePricing}>Annual Pricing</Text>
             </View>
-            <TextInput
-              style={styles.input}
-              value={annualPrice}
-              onChangeText={setAnnualPrice}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor="#999"
-            />
+            <View style={styles.priceInputContainer}>
+              <Text style={styles.currencySymbol}>Rs.</Text>
+              <TextInput
+                style={styles.priceInput}
+                value={annualPrice}
+                onChangeText={setAnnualPrice}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor="#999"
+              />
+            </View>
           </View>
         </View>
 
@@ -437,26 +437,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
-    paddingTop: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingVertical: 40,
+    paddingTop: 70,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
   },
   headerTitle: {
-    color: "#FFD700",
+    color: "#FFFC35",
     fontSize: 22,
     fontWeight: "bold",
     marginLeft: 10,
   },
   scrollContainer: {
-    padding: 20,
+    padding: 15,
     paddingBottom: 40,
   },
   card: {
-    backgroundColor: "#FFFFE0", // Light yellow
-    borderRadius: 20,
+    backgroundColor: "#FFFD90",
+    borderRadius: 18,
     padding: 15,
-    marginBottom: 20,
+    paddingBottom: 26,
+    marginBottom: 15,
+    marginTop: 10,
   },
   cardHeader: {
     flexDirection: "row",
@@ -465,34 +467,37 @@ const styles = StyleSheet.create({
   },
   cardTitleContainer: {
     flex: 1,
-    marginLeft: 10,
+    marginLeft: 6,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "600",
     color: "#333",
+  },
+  cardTitlePricing: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginLeft: 5,
   },
   input: {
     backgroundColor: "#fff",
     borderRadius: 10,
     paddingHorizontal: 15,
     height: 50,
-    fontSize: 16,
+    fontSize: 17,
     color: "#333",
   },
   lotItem: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
+    backgroundColor: "#FFFFE0",
+    borderRadius: 20,
     padding: 15,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
-    borderWidth: 2,
-    borderColor: "transparent",
+    marginBottom: 8,
   },
   lotItemSelected: {
-    borderColor: "#FFD700",
     backgroundColor: "#FFFEF0",
   },
   lotInfo: {
@@ -528,7 +533,7 @@ const styles = StyleSheet.create({
     zIndex: 10, // For dropdown to appear on top
   },
   dropdownButton: {
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#FFFFE0",
     borderRadius: 10,
     padding: 15,
     flexDirection: "row",
@@ -540,16 +545,12 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   dropdownList: {
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFEC7",
     borderRadius: 10,
     marginTop: 5,
-    borderColor: "#eee",
-    borderWidth: 1,
   },
   dropdownItem: {
     padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
   },
   rowContainer: {
     flexDirection: "row",
@@ -558,7 +559,7 @@ const styles = StyleSheet.create({
   },
   halfCard: {
     flex: 1,
-    backgroundColor: "#FFFFE0",
+    backgroundColor: "#FFFD90",
     borderRadius: 20,
     padding: 15,
     marginBottom: 20,
@@ -578,7 +579,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   billingCycleButtonActive: {
-    backgroundColor: "#FFD700",
+    backgroundColor: "#FFFFD6",
   },
   billingCycleText: {
     fontSize: 14,
@@ -598,11 +599,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   createButton: {
-    backgroundColor: "#FFD700",
-    borderRadius: 15,
-    paddingVertical: 18,
+    backgroundColor: "#FFFC35",
+    paddingVertical: 15,
+    paddingHorizontal: 55,
+    borderRadius: 20,
     alignItems: "center",
     marginTop: 10,
+    alignSelf: "center",
+    marginBottom: 85,
   },
   createButtonDisabled: {
     opacity: 0.6,
@@ -638,7 +642,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f0f0f0",
+    backgroundColor: "#FFFEC7",
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 15,
@@ -665,12 +669,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#FFFEF0",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: "#FFFFE0",
+    borderRadius: 20,
+    padding: 15,
     marginTop: 10,
-    borderWidth: 2,
-    borderColor: "#FFD700",
   },
   selectedLotInfo: {
     flexDirection: "row",
@@ -685,6 +687,26 @@ const styles = StyleSheet.create({
   },
   removeLotButton: {
     padding: 5,
+  },
+  priceInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    height: 50,
+    paddingHorizontal: 15,
+  },
+  currencySymbol: {
+    fontSize: 17,
+    color: "#888",
+    marginRight: 8,
+    fontWeight: "600",
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 17,
+    color: "#333",
+    height: 50,
   },
 });
 
