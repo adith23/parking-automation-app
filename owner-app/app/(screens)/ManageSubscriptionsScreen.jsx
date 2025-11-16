@@ -92,7 +92,7 @@ const ManageSubscriptionsScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <Icon name="list-alt" size={24} color="#FFD700" solid />
+        <Icon name="list-alt" size={24} color="#FFFC35" solid />
         <Text style={styles.headerTitle}>Manage Subscriptions</Text>
       </View>
 
@@ -109,7 +109,7 @@ const ManageSubscriptionsScreen = () => {
             keyExtractor={(item) => item.id.toString()}
             ListHeaderComponent={renderListHeader}
             ListEmptyComponent={renderEmptyList}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={styles.scrollContainer}
           />
         )}
       </View>
@@ -127,42 +127,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 20,
-    paddingTop: 40,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingVertical: 40,
+    paddingTop: 70,
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
   },
   headerTitle: {
-    color: "#FFD700",
+    color: "#FFFC35",
     fontSize: 22,
     fontWeight: "bold",
     marginLeft: 10,
   },
   container: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20, // Add padding here for content
+    marginBottom: 80,
   },
-  listContent: {
-    paddingBottom: 20, // Add padding to the bottom of the list content
+  scrollContainer: {
+    padding: 20,
+    marginBottom: 200,
   },
   addButton: {
     backgroundColor: "#FFFFE0",
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 17,
+    paddingVertical: 15,
     paddingHorizontal: 15,
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     marginBottom: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 5,
   },
   addButtonText: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: "#333",
     marginLeft: 8,
@@ -190,39 +193,36 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   card: {
-    backgroundColor: "#FFFFE0",
-    borderRadius: 20,
-    padding: 20,
-    paddingVertical: 10,
+    backgroundColor: "#FFFD90",
+    paddingLeft: 22,
+    paddingRight: 20,
+    paddingVertical: 12,
     marginBottom: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderRadius: 25,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 4,
   },
   cardInfo: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 16,
-    color: "#555",
+    color: "#1C1C1C",
     marginTop: 2,
+    fontWeight: "500",
   },
   cardPlanDetails: {
     fontSize: 14,
-    color: "#888",
-    marginTop: 8,
+    color: "#555",
+    fontWeight: "500",
+    marginTop: 6,
+    marginBottom: 3,
   },
 });
 

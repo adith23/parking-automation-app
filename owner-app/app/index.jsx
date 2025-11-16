@@ -2,17 +2,16 @@ import React, { useEffect } from "react";
 import { SafeAreaView, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import MyLogo from "../assets/images/mylogo.svg";
-import 'expo-dev-client';
-
+import MyLogo from "../assets/images/Logo.svg";
+import "expo-dev-client";
 
 export default function Index() {
   const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      router.replace("/(auth)/LoginScreen");
-    }, 2000); // 5 seconds
+      router.replace("/(auth)/LaunchScreen");
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [router]);
@@ -20,7 +19,7 @@ export default function Index() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <MyLogo style={styles.image} />
+        <MyLogo width={450} height={350} style={styles.image} />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -29,12 +28,10 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffff",
-    justifyContent: "flex-end", // center vertically
+    backgroundColor: "#FFFD78",
     alignItems: "center",
   },
   image: {
-    width: 200,
-    height: 70,
+    marginTop: 210,
   },
 });

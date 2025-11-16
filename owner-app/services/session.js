@@ -1,5 +1,4 @@
 // Simple event hub for auth session changes
-
 const listeners = new Set();
 
 /**

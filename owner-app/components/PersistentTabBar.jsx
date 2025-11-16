@@ -25,24 +25,24 @@ export default function PersistentTabBar() {
     "SettingsScreen",
   ];
 
-  // Determine if we should show the tab bar
+  // Determine if should show the tab bar
   const shouldShowTabBar = useMemo(() => {
     // Don't show on auth screens
     if (segments[0] === "(auth)" || segments[0] === "index") {
       return false;
     }
+
     // Only show if user is authenticated
     if (!user) {
       return false;
     }
-    // Optionally hide on specific screens that should feel more modal-like
-    // Uncomment if you want to hide tab bar on certain screens:
+    
     const modalScreens = ["AddLotScreen", "EditProfileScreen"];
     if (segments[0] === "(screens)" && modalScreens.includes(segments[1])) {
       return false;
     }
     return true;
-  }, [segments, user]);
+  }, [segments, user, pathname]);
 
   // Determine active tab index based on pathname
   const activeTabIndex = useMemo(() => {
@@ -51,7 +51,6 @@ export default function PersistentTabBar() {
     if (pathname.includes("ManageLotsScreen")) return 2;
     if (pathname.includes("AnalyticsScreen")) return 3;
     if (pathname.includes("SettingsScreen")) return 4;
-    // Default to the tab we came from, or HomeScreen
     return 0;
   }, [pathname]);
 

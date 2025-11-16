@@ -12,17 +12,14 @@ import {
 } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
-import FrontVector from "../../assets/images/login-front-vector.svg";
-import RearVector from "../../assets/images/login-rear-vector.svg";
 import GoogleIcon from "../../assets/images/google-icon.svg";
-import XIcon from "../../assets/images/x-icon.svg";
-import FacebookIcon from "../../assets/images/facebook-icon.svg";
+import XIcon1 from "../../assets/icons/X.svg";
+import FacebookIcon1 from "../../assets/icons/Facebook.svg";
 import { useAuth } from "../../context/AuthContext";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, authLoading, user } = useAuth();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +58,7 @@ export default function LoginScreen() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <FrontVector style={styles.image} />
+        <View style={styles.headerTop}></View>
         <View style={styles.header}>
           <Text style={styles.title}>Sign In Your Account</Text>
         </View>
@@ -73,18 +70,20 @@ export default function LoginScreen() {
           <TextInput
             style={styles.input}
             onChangeText={setEmail}
-            placeholder="Email"
+            placeholder="Enter Email Address"
             value={email}
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholderTextColor="#888"
           />
           <Text style={styles.lable}>Password</Text>
           <TextInput
             style={styles.input}
             onChangeText={setPassword}
             value={password}
-            placeholder="Password"
+            placeholder="Enter Password"
             secureTextEntry={true}
+            placeholderTextColor="#888"
           />
           <View style={styles.centeraliment}>
             <TouchableOpacity
@@ -98,24 +97,31 @@ export default function LoginScreen() {
                 <Text style={styles.btntext}>Login</Text>
               )}
             </TouchableOpacity>
+
+            {/* Forgot Password Link */}
+            <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <View style={styles.navigation}>
+              <Link href="/(auth)/SignupScreen" asChild>
+                <TouchableOpacity style={styles.createAccountButton}>
+                  <Text style={styles.createAccountButtonText}>Sign Up</Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
           </View>
+
+          {/* Social Login Section */}
           <View style={styles.centeraliment}>
             <Text style={styles.options}>or sign in with</Text>
           </View>
           <View style={styles.iconview}>
-            <XIcon style={styles.icon} />
-            <GoogleIcon style={styles.icon} />
-            <FacebookIcon style={styles.icon} />
-          </View>
-          <View style={styles.navigation}>
-            <Link href="/(auth)/signup">
-              <Text style={styles.linktext}>Create New Account</Text>
-            </Link>
+            <XIcon1 style={styles.socialIcon} />
+            <GoogleIcon style={styles.socialIcon} />
+            <FacebookIcon1 style={styles.socialIcon} />
           </View>
         </ScrollView>
-        <View style={styles.bottomcontainer}>
-          <RearVector style={styles.image} />
-        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -124,86 +130,129 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
   header: {
-    alignItems: "center",
-    marginTop: 25,
+    backgroundColor: "#FFFD90",
+    padding: 20,
+    paddingTop: 100,
+    borderBottomLeftRadius: 70,
+    borderBottomRightRadius: 70,
   },
   title: {
-    fontSize: 35,
+    fontSize: 30,
     fontWeight: "bold",
-    marginBottom: 60,
+    marginBottom: 40,
+    marginLeft: 20,
+    alignSelf: "center",
   },
-  image: {
-    width: "100%",
-    height: 80,
-  },
-  icon: {
-    width: 280,
-    height: 180,
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   scrollView: {
     padding: 20,
     paddingTop: 0,
     flexGrow: 1,
     justifyContent: "center",
+    marginLeft: 10,
+    marginTop: 30,
   },
   lable: {
-    fontSize: 20,
+    fontSize: 19,
+    marginLeft: 15,
+    fontWeight: "500",
+    marginBottom: -1,
   },
   input: {
+    backgroundColor: "#FFFEC7",
+    borderRadius: 25,
     height: 60,
     marginVertical: 10,
-    borderColor: "#000",
-    borderWidth: 2,
-    borderRadius: 8,
+    color: "#000",
     paddingHorizontal: 10,
-    fontSize: 20,
+    fontSize: 18,
+    paddingLeft: 25,
   },
   centeraliment: {
     alignItems: "center",
+    marginTop: 25,
   },
   submitbtn: {
-    backgroundColor: "#FFFC35",
-    borderWidth: 2,
-    borderColor: "#000",
-    paddingVertical: 15,
-    borderRadius: 10,
+    backgroundColor: "#FFFD78",
+    paddingVertical: 18,
+    borderRadius: 30,
     alignItems: "center",
-    marginTop: 10,
     width: "80%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   btntext: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
+    color: "#000",
   },
   options: {
-    fontSize: 20,
-    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#444",
   },
   iconview: {
-    marginTop: 10,
-    gap: 50,
+    gap: 30,
     justifyContent: "center",
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 50,
+  },
+  socialIcon: {
+    width: 60,
+    height: 60,
   },
   navigation: {
-    marginTop: -50,
     justifyContent: "center",
     flex: 1,
     alignItems: "center",
   },
+  forgotPasswordContainer: {
+    alignItems: "center",
+    width: "85%",
+    alignSelf: "center",
+    marginVertical: 15,
+  },
+  forgotPasswordText: {
+    fontSize: 17,
+    fontWeight: "600",
+    color: "#444",
+  },
   linktext: {
     fontSize: 20,
     fontWeight: "bold",
+    color: "#3E3C0E",
   },
-  bottomcontainer: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "flex-end",
+  createAccountButton: {
+    backgroundColor: "#F5F7DF",
+    paddingVertical: 18,
+    paddingHorizontal: 30,
+    borderRadius: 30,
     alignItems: "center",
+    width: "100%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  createAccountButtonText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#3E3C0E",
+    marginLeft: 5,
   },
 });

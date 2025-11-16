@@ -13,11 +13,9 @@ import {
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Link, useRouter } from "expo-router";
 import { useAuth } from "../../context/AuthContext";
-import FrontVector from "../../assets/images/login-front-vector.svg";
-import RearVector from "../../assets/images/login-rear-vector.svg";
 import GoogleIcon from "../../assets/images/google-icon.svg";
-import XIcon from "../../assets/images/x-icon.svg";
-import FacebookIcon from "../../assets/images/facebook-icon.svg";
+import XIcon from "../../assets/icons/X.svg";
+import FacebookIcon from "../../assets/icons/Facebook.svg";
 
 export default function Signup() {
   const router = useRouter();
@@ -49,7 +47,7 @@ export default function Signup() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        <FrontVector style={styles.image} />
+        <View style={styles.headerTop}></View>
         <View style={styles.header}>
           <Text style={styles.title}>Create Your Account</Text>
         </View>
@@ -64,6 +62,7 @@ export default function Signup() {
             placeholder="Name"
             value={name}
             autoCapitalize="words"
+            placeholderTextColor="#888"
           />
           <Text style={styles.lable}>Email</Text>
           <TextInput
@@ -73,6 +72,7 @@ export default function Signup() {
             value={email}
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholderTextColor="#888"
           />
           <Text style={styles.lable}>Password</Text>
           <TextInput
@@ -81,6 +81,7 @@ export default function Signup() {
             value={password}
             placeholder="Password"
             secureTextEntry={true}
+            placeholderTextColor="#888"
           />
           <View style={styles.centeraliment}>
             <TouchableOpacity
@@ -105,13 +106,13 @@ export default function Signup() {
           </View>
           <View style={styles.navigation}>
             <Link href="/(auth)/LoginScreen">
-              <Text style={styles.linktext}>Have an account? Log In</Text>
+              <Text style={styles.linktext}>
+                Have an account?{" "}
+                <Text style={styles.linkHighlight}>Log In</Text>
+              </Text>
             </Link>
           </View>
         </ScrollView>
-        <View style={styles.bottomcontainer}>
-          <RearVector style={styles.image} />
-        </View>
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -120,86 +121,116 @@ export default function Signup() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
   header: {
+    backgroundColor: "#FFFD90",
+    padding: 20,
+    paddingTop: 100,
+    borderBottomLeftRadius: 70,
+    borderBottomRightRadius: 70,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 25,
   },
   title: {
-    fontSize: 35,
+    fontSize: 30,
     fontWeight: "bold",
-    marginBottom: 60,
-  },
-  image: {
-    width: "100%",
-    height: 80,
-  },
-  icon: {
-    width: 180,
-    height: 180,
+    marginBottom: 40,
+    marginLeft: 20,
+    alignSelf: "center",
   },
   scrollView: {
     padding: 20,
-    paddingTop: 0,
+    paddingTop: 25,
     flexGrow: 1,
     justifyContent: "center",
   },
   lable: {
-    fontSize: 20,
+    fontSize: 19,
+    marginLeft: 15,
+    fontWeight: "500",
+    marginBottom: -1,
   },
   input: {
+    backgroundColor: "#FFFEC7",
+    borderRadius: 25,
     height: 60,
     marginVertical: 10,
-    borderColor: "#000",
-    borderWidth: 2,
-    borderRadius: 8,
+    color: "#000",
     paddingHorizontal: 10,
-    fontSize: 20,
+    fontSize: 18,
+    paddingLeft: 25,
   },
   centeraliment: {
     alignItems: "center",
+    marginTop: 20,
   },
   submitbtn: {
-    backgroundColor: "#FFFC35",
-    borderWidth: 2,
-    borderColor: "#000",
-    paddingVertical: 15,
-    borderRadius: 10,
+    backgroundColor: "#FFFD78",
+    paddingVertical: 18,
+    borderRadius: 30,
     alignItems: "center",
-    marginTop: 10,
     width: "80%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   btntext: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "bold",
+    color: "#000",
   },
   options: {
-    fontSize: 20,
-    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#444",
   },
   iconview: {
-    marginTop: 10,
-    gap: 50,
+    gap: 30,
     justifyContent: "center",
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
   },
   navigation: {
-    marginTop: -30,
     justifyContent: "center",
     flex: 1,
     alignItems: "center",
+    marginBottom: 30,
   },
   linktext: {
     fontSize: 20,
     fontWeight: "bold",
+    color: "#3E3C0E",
+    marginBottom: 30,
   },
-  bottomcontainer: {
-    flex: 1,
-    flexDirection: "column",
-    justifyContent: "flex-end",
+  linkHighlight: {
+    color: "#E5E100", // Dark Yellow
+  },
+  createAccountButton: {
+    backgroundColor: "#F5F7DF",
+    paddingVertical: 18,
+    paddingHorizontal: 30,
+    borderRadius: 30,
     alignItems: "center",
+    width: "100%",
+    alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  createAccountButtonText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#3E3C0E",
+    marginLeft: 5,
   },
 });
