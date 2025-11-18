@@ -29,6 +29,18 @@ if secrets_arn:
 
         print("Successfully loaded secrets into environment.")
 
+        if "GOOGLE_APPLICATION_CREDENTIALS" in aws_secrets:
+            raw_json_str = aws_secrets["GOOGLE_APPLICATION_CREDENTIALS"]
+
+            creds_path = "/tmp/google-credentials.json"
+            with open(creds_path, "w") as f:
+                f.write(raw_json_str)
+
+            # Make Vision API SDK load it automatically
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+
+            print(f"🔑 Google Vision credentials written to {creds_path}")
+
     except Exception as e:
         print(f"FATAL: Could not fetch secrets from AWS Secrets Manager: {e}")
         sys.exit(1)
@@ -67,8 +79,8 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # Optional: for future refresh tokens
 
     S3_BUCKET_NAME: str
-    VIDEO_S3_PATH: str 
-    S3_VEHICLE_MODEL_KEY: str    
+    VIDEO_S3_PATH: str
+    S3_VEHICLE_MODEL_KEY: str
     S3_LPR_MODEL_KEY: str
 
     # Twilio Configuration (for OTP)
