@@ -51,11 +51,10 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
 
     try:
 
-
         # --- Download video from S3 using the utility function ---
-        video_path = download_video_from_s3(
+        video_path = download_file_from_s3(
             bucket_name=settings.S3_BUCKET_NAME,
-            video_key=settings.VIDEO_S3_PATH, # Use the correct key
+            video_key=settings.VIDEO_S3_PATH, 
             local_path=LOCAL_VIDEO_PATH
         )
         # Create a dedicated video source for this client session
