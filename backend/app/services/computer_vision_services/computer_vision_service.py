@@ -17,10 +17,12 @@ from app.core.database import SessionLocal
 from app.core.redis import get_redis
 from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.services.session_service import session_service
+from app.utils.s3 import download_file_from_s3
 
 # --- Configuration and Model Paths ---
-VEHICLE_MODEL_PATH = "yolo11n.pt"
-LPR_MODEL_PATH = "license-plate-finetune-v1n.pt"
+MODEL_CACHE_DIR = "/tmp/models"
+VEHICLE_MODEL_PATH = os.path.join(MODEL_CACHE_DIR, "yolo11n.pt")
+LPR_MODEL_PATH = os.path.join(MODEL_CACHE_DIR, "license-plate-finetune-v1n.pt")
 
 OCCUPIED_FRAME_THRESHOLD = 3
 EMPTY_FRAME_THRESHOLD = 3
@@ -44,6 +46,20 @@ class ComputerVisionService:
     def __init__(self, parking_slots: List[Dict[str, np.ndarray]]):
 
         print("✅ Initializing Computer Vision Service...")
+
+        # --- Download Models from S3 ---
+        print("Downloading ML models from S3...")
+        vehicle_model_path = download_file_from_s3(
+            bucket_name=settings.S3_BUCKET_NAME,
+            file_key=settings.S3_VEHICLE_MODEL_KEY,
+            local_path=VEHICLE_MODEL_PATH,
+        )
+        lpr_model_path = download_file_from_s3(
+            bucket_name=settings.S3_BUCKET_NAME,
+            file_key=settings.S3_LPR_MODEL_KEY,
+            local_path=LPR_MODEL_PATH,
+        )
+        print("✅ ML models downloaded successfully.")
 
         # --- Model Initialization ---
         self.vehicle_model = YOLO(VEHICLE_MODEL_PATH)
