@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 # --- Path Configuration ---
 script_dir = os.path.dirname(__file__)
-LOCAL_VIDEO_PATH = "/tmp/sample_video.mp4"
+LOCAL_VIDEO_PATH = "/tmp/live_view_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
 def _get_raw_frame_processor():
