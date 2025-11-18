@@ -10,19 +10,20 @@ import logging
 
 from app import schemas, models
 from app.core.database import get_db
+from app.core.config import settings
 from app.models.owner_models.parking_lot_model import ParkingLot
 from app.schemas.owner_schemas.parking_slot_schema import ParkingSlotBulkCreate
 from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.services.webrtc_service import webrtc_manager, WebRTCVideoTrack
+from app.utils.s3 import download_file_from_s3
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # --- Path Configuration ---
 script_dir = os.path.dirname(__file__)
-VIDEO_PATH = r"C:\Users\Adithya\Downloads\sample_video.mp4"
+LOCAL_VIDEO_PATH = "/tmp/sample_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
-
 
 def _get_raw_frame_processor():
     """
@@ -49,14 +50,19 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
     video_source = None
 
     try:
-        if not os.path.exists(VIDEO_PATH):
-            await websocket.send_text(json.dumps({"error": "Video source not found"}))
-            return
 
+
+        # --- Download video from S3 using the utility function ---
+        video_path = download_video_from_s3(
+            bucket_name=settings.S3_BUCKET_NAME,
+            video_key=settings.VIDEO_S3_PATH, # Use the correct key
+            local_path=LOCAL_VIDEO_PATH
+        )
         # Create a dedicated video source for this client session
         from app.services.webrtc_service import VideoTrackSource
+
         video_source = VideoTrackSource(
-            video_path=VIDEO_PATH,
+            video_path=video_path, 
             frame_processor=_get_raw_frame_processor(),
             fps=30,
         )

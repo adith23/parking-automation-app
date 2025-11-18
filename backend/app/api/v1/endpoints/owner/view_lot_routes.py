@@ -10,6 +10,8 @@ from aiortc import RTCPeerConnection, RTCSessionDescription
 import logging
 
 from app.core.database import get_db
+from app.core.config import settings
+from app.utils.s3 import download_video_from_s3
 from app import models
 from app.models.owner_models.parking_lot_model import ParkingLot
 from app.services.computer_vision_services.computer_vision_service import (
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 script_dir = os.path.dirname(__file__)
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
+LOCAL_VIDEO_PATH = "/tmp/live_view_video.mp4"
 
 
 async def _initialize_cv_service(parking_lot_id: int, db: Session):
@@ -36,8 +39,12 @@ async def _initialize_cv_service(parking_lot_id: int, db: Session):
     if not lot:
         raise HTTPException(status_code=404, detail="Parking lot not found")
 
-    # Use placeholder video if not specified in DB
-    video_path = r"C:\Users\Adithya\Downloads\sample_video4.mp4"
+        # Use placeholder video if not specified in DB
+        video_path = download_video_from_s3(
+            bucket_name=settings.S3_BUCKET_NAME,
+            video_key=settings.VIDEO_S3_PATH,
+            local_path=LOCAL_VIDEO_PATH,
+        )
 
     if not os.path.exists(video_path):
         raise HTTPException(status_code=404, detail="Video source not found")
@@ -88,6 +95,7 @@ async def websocket_live_view(
         # Create a dedicated video source for this client session
         # (Don't share video sources between clients to avoid queue conflicts)
         from app.services.webrtc_service import VideoTrackSource
+
         video_source = VideoTrackSource(
             video_path=video_path,
             frame_processor=cv_service.process_frame,
@@ -150,7 +158,7 @@ async def websocket_live_view(
 @router.get("/{parking_lot_id}/live-view-ui", response_class=HTMLResponse)
 async def get_live_view_page(parking_lot_id: int, db: Session = Depends(get_db)):
     """Serve the HTML page for live parking lot viewing"""
-    try:    
+    try:
         parking_lot = (
             db.query(ParkingLot).filter(ParkingLot.id == parking_lot_id).first()
         )
