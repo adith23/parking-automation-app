@@ -29,6 +29,9 @@ RUN pip install --no-cache-dir \
     torchaudio==2.3.1 \
     --extra-index-url https://download.pytorch.org/whl/cpu
 
+# Install lapx BEFORE ultralytics tries auto-install
+RUN pip install --no-cache-dir lapx
+
 # Install the rest of the Python dependencies from PyPI
 RUN pip install --no-cache-dir -r requirements.txt
 

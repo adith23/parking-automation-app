@@ -23,6 +23,7 @@ opencv-python-headless==4.10.0.84
 numpy==1.26.4
 scipy==1.15.3
 filterpy>=1.4.2
+lapx>=0.5.5
 
 # -------- Real-time Communication --------
 redis==7.0.1
