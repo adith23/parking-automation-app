@@ -16,7 +16,12 @@ from app.schemas.owner_schemas.parking_slot_schema import ParkingSlotBulkCreate
 from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.services.webrtc_service import webrtc_manager, WebRTCVideoTrack
 from app.utils.s3 import download_file_from_s3
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCConfiguration,
+    RTCIceServer,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -72,6 +77,12 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
             file_key=settings.VIDEO_S3_PATH,
             local_path=LOCAL_VIDEO_PATH,
         )
+
+        import subprocess
+
+        result = subprocess.run(["ffprobe", video_path], capture_output=True, text=True)
+        logger.info(f"Video info: {result.stderr}")
+
         # Create a dedicated video source for this client session
         from app.services.webrtc_service import VideoTrackSource
 

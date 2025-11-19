@@ -50,6 +50,11 @@ async def _initialize_cv_service(parking_lot_id: int, db: Session):
         bucket_name=s3_bucket, file_key=s3_key, local_path=LOCAL_VIDEO_PATH
     )
 
+    import subprocess
+
+    result = subprocess.run(["ffprobe", video_path], capture_output=True, text=True)
+    logger.info(f"Video info: {result.stderr}")
+
     if not os.path.exists(video_path):
         raise HTTPException(status_code=404, detail="Video source not found")
 
