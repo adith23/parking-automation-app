@@ -69,19 +69,22 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
     pc = RTCPeerConnection(configuration=RTCConfiguration(iceServers=ice_servers))
     video_source = None
 
-    try:
+    # Add ICE debugging
+    @pc.on("iceconnectionstatechange")
+    async def on_ice_connection_state_change():
+        logger.info(f"🧊 ICE Connection State [{session_id}]: {pc.iceConnectionState}")
 
+    @pc.on("connectionstatechange")
+    async def on_connection_state_change():
+        logger.info(f"🔌 Connection State [{session_id}]: {pc.connectionState}")
+
+    try:
         # --- Download video from S3 using the utility function ---
         video_path = download_file_from_s3(
             bucket_name=settings.S3_BUCKET_NAME,
             file_key=settings.VIDEO_S3_PATH,
             local_path=LOCAL_VIDEO_PATH,
         )
-
-        import subprocess
-
-        result = subprocess.run(["ffprobe", video_path], capture_output=True, text=True)
-        logger.info(f"Video info: {result.stderr}")
 
         # Create a dedicated video source for this client session
         from app.services.webrtc_service import VideoTrackSource
@@ -133,16 +136,32 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
                 break
 
     except Exception as e:
-        logger.error(f"❌ Error in define slots WebRTC: {e}")
-        await websocket.send_text(json.dumps({"error": str(e)}))
+        logger.error(f"❌ Error in define slots WebRTC: {e}", exc_info=True)
+        try:
+            await websocket.send_text(json.dumps({"error": str(e)}))
+        except:
+            pass
+        # CRITICAL: Clean up in correct order
+        logger.info(f"Starting cleanup for {session_id}")
 
-    finally:
-        # Clean up
+        # 1. Close peer connection first
+        try:
+            await pc.close()
+            logger.info(f"Peer connection closed for {session_id}")
+        except Exception as e:
+            logger.error(f"Error closing peer connection: {e}")
+
+        # 2. Stop video source
         if video_source:
-            await video_source.stop()
+            try:
+                await video_source.stop()
+                logger.info(f"Video source stopped for {session_id}")
+            except Exception as e:
+                logger.error(f"Error stopping video source: {e}")
+
+        # 3. Remove session
         webrtc_manager.remove_session(session_id)
-        await pc.close()
-        logger.info(f"✅ WebRTC session closed: {session_id}")
+        logger.info(f"✅ WebRTC session fully cleaned up: {session_id}")
 
 
 # --- Save Slots Logic ---

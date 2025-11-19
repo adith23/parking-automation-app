@@ -200,8 +200,8 @@ class SessionService:
 
             # Handle departure: occupied → available
             if old_status == "occupied" and new_status == "available":
-                 end_time = datetime.now(timezone.utc)
-                 return self.end_session_by_slot(slot_id, end_time, db)
+                end_time = datetime.now(timezone.utc)
+                return self.end_session_by_slot(slot_id, end_time, db)
 
             return None
         except Exception as e:
