@@ -16,6 +16,7 @@ from app.schemas.owner_schemas.parking_slot_schema import ParkingSlotBulkCreate
 from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.services.webrtc_service import webrtc_manager, WebRTCVideoTrack
 from app.utils.s3 import download_file_from_s3
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 script_dir = os.path.dirname(__file__)
 LOCAL_VIDEO_PATH = "/tmp/live_view_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
+
 
 def _get_raw_frame_processor():
     """
@@ -46,7 +48,20 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
     await websocket.accept()
 
     session_id = f"define-slots-{parking_lot_id}"
-    pc = RTCPeerConnection()
+
+    # CRITICAL: Add ICE servers configuration for AWS
+    ice_servers = [
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
+        # Add TURN server if needed (for strict NAT scenarios)
+        # RTCIceServer(
+        #     urls=["turn:your-turn-server.com:3478"],
+        #     username="user",
+        #     credential="pass"
+        # )
+    ]
+
+    pc = RTCPeerConnection(configuration=RTCConfiguration(iceServers=ice_servers))
     video_source = None
 
     try:
@@ -54,14 +69,14 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
         # --- Download video from S3 using the utility function ---
         video_path = download_file_from_s3(
             bucket_name=settings.S3_BUCKET_NAME,
-            file_key=settings.VIDEO_S3_PATH, 
-            local_path=LOCAL_VIDEO_PATH
+            file_key=settings.VIDEO_S3_PATH,
+            local_path=LOCAL_VIDEO_PATH,
         )
         # Create a dedicated video source for this client session
         from app.services.webrtc_service import VideoTrackSource
 
         video_source = VideoTrackSource(
-            video_path=video_path, 
+            video_path=video_path,
             frame_processor=_get_raw_frame_processor(),
             fps=30,
         )
