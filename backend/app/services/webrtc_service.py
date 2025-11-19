@@ -62,6 +62,10 @@ class VideoTrackSource:
             self.is_running = False
             raise RuntimeError(f"Could not open video source: {self.video_path}")
 
+        # Log video properties
+        fps = self.cap.get(cv2.CAP_PROP_FPS)
+        width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         logger.info(f"✅ Video source opened: {self.video_path}")
 
         # Start the frame processing loop
