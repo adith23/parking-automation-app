@@ -141,6 +141,8 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
             await websocket.send_text(json.dumps({"error": str(e)}))
         except:
             pass
+        
+    finally:
         # CRITICAL: Clean up in correct order
         logger.info(f"Starting cleanup for {session_id}")
 
