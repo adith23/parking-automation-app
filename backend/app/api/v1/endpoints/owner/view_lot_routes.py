@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 script_dir = os.path.dirname(__file__)
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
-VIDEO_PATH = "assets/sample_video.mp4"
+VIDEO_PATH = "/app/assets/sample_video.mp4"
 
 
 async def _initialize_cv_service(parking_lot_id: int, db: Session):

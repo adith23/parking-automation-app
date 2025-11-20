@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # --- Path Configuration ---
 script_dir = os.path.dirname(__file__)
-VIDEO_PATH = "assets/sample_video.mp4"
+VIDEO_PATH = "/app/assets/sample_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
 
