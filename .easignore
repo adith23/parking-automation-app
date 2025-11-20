@@ -1,0 +1,76 @@
+# Node modules
+node_modules/
+**node_modules/**
+node_modules
+
+# Expo cache and local data
+.expo/
+.yarn/cache/
+.npm/
+.gradle/
+.bin/
+
+# Git folder
+.git/
+.gitignore
+.gitattributes
+.svn/
+.hg/
+.vscode/
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# Backend and large directories
+backend/
+server/
+api/
+dataset/
+data/
+videos/
+models/
+training/
+uploads/
+dump/
+static/
+driver-app/
+cv_worker/
+
+# Android build artifacts
+android/build/
+android/app/build/
+android/.gradle/
+android/**/intermediates/
+android/**/.cxx/
+android/.cxx/
+android/local.properties
+
+# iOS build artifacts
+ios/build/
+ios/Pods/
+
+# Web build output folder
+web-build/
+dist/
+
+# Documentation and temporary files
+*.md
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+build/
+dist/
+temp/
+coverage/
+web-build/
+.next/
+
+# EAS build artifacts
+.eas/
+*.iml
+*.iws
+*.ipr
+*.idea/
+.DS_Store
