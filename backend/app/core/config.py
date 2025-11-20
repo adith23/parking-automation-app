@@ -75,13 +75,8 @@ class Settings(BaseSettings):
     # JWT Configuration
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str = "HS256"
-    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 300  # 5 hours
-    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # Optional: for future refresh tokens
-
-    S3_BUCKET_NAME: str
-    VIDEO_S3_PATH: str
-    S3_VEHICLE_MODEL_KEY: str
-    S3_LPR_MODEL_KEY: str
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES: int = 300 
+    JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7  
 
     # Twilio Configuration (for OTP)
     TWILIO_ACCOUNT_SID: Optional[str] = None

@@ -7,12 +7,16 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from geoalchemy2.shape import to_shape
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
+from aiortc import (
+    RTCPeerConnection,
+    RTCSessionDescription,
+    RTCConfiguration,
+    RTCIceServer,
+)
 import logging
 
 from app.core.database import get_db
 from app.core.config import settings
-from app.utils.s3 import download_file_from_s3
 from app import models
 from app.models.owner_models.parking_lot_model import ParkingLot
 from app.services.computer_vision_services.computer_vision_service import (
@@ -26,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 script_dir = os.path.dirname(__file__)
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
-LOCAL_VIDEO_PATH = "/tmp/live_view_video.mp4"
+VIDEO_PATH = "/app/assets/sample_video.mp4"
 
 
 async def _initialize_cv_service(parking_lot_id: int, db: Session):
@@ -41,20 +45,13 @@ async def _initialize_cv_service(parking_lot_id: int, db: Session):
     if not lot:
         raise HTTPException(status_code=404, detail="Parking lot not found")
 
-    # Always download video from S3
-    from app.utils.s3 import download_file_from_s3
-
-    s3_bucket = settings.S3_BUCKET_NAME
-    s3_key = settings.VIDEO_S3_PATH
-
-    video_path = download_file_from_s3(
-        bucket_name=s3_bucket, file_key=s3_key, local_path=LOCAL_VIDEO_PATH
-    )
-
-    logger.info(f"✅ Video downloaded to: {video_path}")
-
-    if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="Video source not found")
+    if not os.path.exists(VIDEO_PATH):
+        logger.error(
+            f"FATAL: Bundled video not found at {VIDEO_PATH}. Check Dockerfile."
+        )
+        raise HTTPException(
+            status_code=500, detail="Video source file not found on server."
+        )
 
     # Load slot polygons from DB
     db_slots = (
@@ -78,7 +75,7 @@ async def _initialize_cv_service(parking_lot_id: int, db: Session):
         )
 
     cv_service = ComputerVisionService(slot_definitions)
-    return cv_service, video_path
+    return cv_service, VIDEO_PATH
 
 
 @router.websocket("/ws/{parking_lot_id}/live-view")

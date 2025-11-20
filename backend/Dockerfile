@@ -44,6 +44,7 @@ COPY --from=python-deps /usr/local/bin /usr/local/bin
 
 # Copy app source
 COPY app ./app
+COPY assets ./assets
 
 ENV PYTHONPATH=/app
 
