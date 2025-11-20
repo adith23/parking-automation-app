@@ -25,6 +25,7 @@ script_dir = os.path.dirname(__file__)
 LOCAL_VIDEO_PATH = "/tmp/sample_video.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
+
 def _get_raw_frame_processor():
     """
     Returns a simple frame processor that returns raw frames without CV processing.
@@ -54,14 +55,14 @@ async def websocket_define_slots(websocket: WebSocket, parking_lot_id: int):
         # --- Download video from S3 using the utility function ---
         video_path = download_file_from_s3(
             bucket_name=settings.S3_BUCKET_NAME,
-            file_key=settings.VIDEO_S3_PATH, 
-            local_path=LOCAL_VIDEO_PATH
+            file_key=settings.VIDEO_S3_PATH,
+            local_path=LOCAL_VIDEO_PATH,
         )
         # Create a dedicated video source for this client session
         from app.services.webrtc_service import VideoTrackSource
 
         video_source = VideoTrackSource(
-            video_path=video_path, 
+            video_path=video_path,
             frame_processor=_get_raw_frame_processor(),
             fps=30,
         )
