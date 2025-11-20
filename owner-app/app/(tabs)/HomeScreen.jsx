@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView, { Marker, PROVIDER_GOOGLE } from "react-native-maps";
 import { useFocusEffect } from "@react-navigation/native";
 import api from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 // Card for "Recent Bookings"
 const BookingCard = ({ icon, driver, location, status, amount }) => {
@@ -53,7 +54,14 @@ const BookingCard = ({ icon, driver, location, status, amount }) => {
 };
 
 // Card for "Today Revenue Insights"
-const InsightCard = ({ icon, title, value, isMain, iconPack, customTextStyle }) => {
+const InsightCard = ({
+  icon,
+  title,
+  value,
+  isMain,
+  iconPack,
+  customTextStyle,
+}) => {
   const IconComponent = iconPack === "FontAwesome5" ? Icon : Icon;
   return (
     <View style={isMain ? styles.insightCardMain : styles.insightCard}>
@@ -75,6 +83,7 @@ const InsightCard = ({ icon, title, value, isMain, iconPack, customTextStyle }) 
 
 // --- Main Screen Component ---
 const HomeScreen = () => {
+  const { user } = useAuth();
   const [recentBookings, setRecentBookings] = useState([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(true);
   const [analytics, setAnalytics] = useState({
@@ -185,7 +194,7 @@ const HomeScreen = () => {
           </TouchableOpacity>
         </View>
         <Text style={styles.welcomeTitle}>Welcome!</Text>
-        <Text style={styles.welcomeName}>Name Name</Text>
+        <Text style={styles.welcomeName}>{user ? user.name : "Owner"}</Text>
       </View>
 
       <ScrollView
@@ -524,7 +533,7 @@ const styles = StyleSheet.create({
   map: {
     ...StyleSheet.absoluteFillObject,
   },
-  
+
   // --- Custom Marker Styles ---
   markerContainer: {
     alignItems: "center",

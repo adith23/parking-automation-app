@@ -29,6 +29,7 @@ export default {
       },
     },
     android: {
+      usesCleartextTraffic: true, 
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff",

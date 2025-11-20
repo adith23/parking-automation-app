@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { emitLogout } from "./session";
 
 // 1. Base URL
-const BASE_URL = "http://98.92.143.74:8000/api/v1";
+const BASE_URL = "http://34.236.242.140:8000/api/v1";
 
 // 2. Create Axios instance
 const api = axios.create({

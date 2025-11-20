@@ -20,8 +20,8 @@ from app.services.session_service import session_service
 
 # --- Configuration and Model Paths ---
 MODEL_CACHE_DIR = "/tmp/models"
-VEHICLE_MODEL_PATH = "/app/assets/yolo11n.pt"
-LPR_MODEL_PATH = "/app/assets/license-plate-finetune-v1n.pt"
+VEHICLE_MODEL_PATH = "/assets/yolo11n.pt"
+LPR_MODEL_PATH = "/assets/license-plate-finetune-v1n.pt"
 
 OCCUPIED_FRAME_THRESHOLD = 3
 EMPTY_FRAME_THRESHOLD = 3
