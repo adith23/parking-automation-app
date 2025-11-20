@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from geoalchemy2.shape import to_shape
 from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCConfiguration, RTCIceServer
 import logging
 
 from app.core.database import get_db
@@ -50,6 +51,8 @@ async def _initialize_cv_service(parking_lot_id: int, db: Session):
         bucket_name=s3_bucket, file_key=s3_key, local_path=LOCAL_VIDEO_PATH
     )
 
+    logger.info(f"✅ Video downloaded to: {video_path}")
+
     if not os.path.exists(video_path):
         raise HTTPException(status_code=404, detail="Video source not found")
 
@@ -89,8 +92,24 @@ async def websocket_live_view(
     await websocket.accept()
 
     session_id = f"live-view-{parking_lot_id}"
-    pc = RTCPeerConnection()
+
+    # CRITICAL: Add ICE servers configuration for AWS
+    ice_servers = [
+        RTCIceServer(urls=["stun:stun.l.google.com:19302"]),
+        RTCIceServer(urls=["stun:stun1.l.google.com:19302"]),
+    ]
+
+    pc = RTCPeerConnection(configuration=RTCConfiguration(iceServers=ice_servers))
     video_source = None
+
+    # Add ICE debugging
+    @pc.on("iceconnectionstatechange")
+    async def on_ice_connection_state_change():
+        logger.info(f"🧊 ICE Connection State [{session_id}]: {pc.iceConnectionState}")
+
+    @pc.on("connectionstatechange")
+    async def on_connection_state_change():
+        logger.info(f"🔌 Connection State [{session_id}]: {pc.connectionState}")
 
     try:
         # Initialize computer vision service
@@ -146,16 +165,34 @@ async def websocket_live_view(
                 break
 
     except Exception as e:
-        logger.error(f"❌ Error in live view WebRTC: {e}")
-        await websocket.send_text(json.dumps({"error": str(e)}))
+        logger.error(f"❌ Error in live view WebRTC: {e}", exc_info=True)
+        try:
+            await websocket.send_text(json.dumps({"error": str(e)}))
+        except:
+            pass
 
     finally:
-        # Clean up
+        # CRITICAL: Clean up in correct order
+        logger.info(f"Starting cleanup for {session_id}")
+
+        # 1. Close peer connection first
+        try:
+            await pc.close()
+            logger.info(f"Peer connection closed for {session_id}")
+        except Exception as e:
+            logger.error(f"Error closing peer connection: {e}")
+
+        # 2. Stop video source
         if video_source:
-            await video_source.stop()
+            try:
+                await video_source.stop()
+                logger.info(f"Video source stopped for {session_id}")
+            except Exception as e:
+                logger.error(f"Error stopping video source: {e}")
+
+        # 3. Remove session
         webrtc_manager.remove_session(session_id)
-        await pc.close()
-        logger.info(f"✅ WebRTC session closed: {session_id}")
+        logger.info(f"✅ WebRTC session fully cleaned up: {session_id}")
 
 
 @router.get("/{parking_lot_id}/live-view-ui", response_class=HTMLResponse)

@@ -19,6 +19,7 @@ RUN apt-get update && \
     python3.11-venv \
     python3.11-distutils \
     python3-pip \
+    python3.12-venv \
     awscli \
     && rm -rf /var/lib/apt/lists/*
 
