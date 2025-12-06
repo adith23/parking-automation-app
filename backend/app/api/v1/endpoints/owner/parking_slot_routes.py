@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 from shapely.geometry import Polygon
 from geoalchemy2.elements import WKTElement
+from geoalchemy2.shape import to_shape
 from aiortc import RTCPeerConnection, RTCSessionDescription
 import logging
 
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 # --- Path Configuration ---
 script_dir = os.path.dirname(__file__)
-VIDEO_PATH = "assets/sample_video.mp4"
+VIDEO_PATH = "assets/sample_videoV2.mp4"
 TEMPLATES_PATH = os.path.join(script_dir, "..", "..", "templates")
 
 
@@ -169,9 +170,32 @@ async def get_define_slots_page(parking_lot_id: int, db: Session = Depends(get_d
         if not parking_lot:
             raise HTTPException(status_code=404, detail="Parking lot not found")
 
+        # --- Fetch existing slots for the parking lot ---
+        existing_slots = (
+            db.query(ParkingSlot)
+            .filter(ParkingSlot.parking_lot_id == parking_lot_id)
+            .all()
+        )
+
+        existing_polygons_data = []
+        for slot in existing_slots:
+            if slot.location is not None:
+                # Convert GeoAlchemy element to a Shapely Polygon
+                shape = to_shape(slot.location)
+                # Get coordinates as a list of [x, y] pairs
+                coords = list(shape.exterior.coords)
+                existing_polygons_data.append(coords)
+
         template_path = os.path.join(TEMPLATES_PATH, "define_slots.html")
         with open(template_path, "r", encoding="utf-8") as f:
-            html_content = f.read().replace("{{ parking_lot_id }}", str(parking_lot_id))
+            html_content = f.read()
+            html_content = html_content.replace(
+                "{{ parking_lot_id }}", str(parking_lot_id)
+            )
+            # Inject existing polygons data as a JSON string
+            html_content = html_content.replace(
+                "{{ existing_polygons }}", json.dumps(existing_polygons_data)
+            )
 
         return html_content
     except Exception as e:

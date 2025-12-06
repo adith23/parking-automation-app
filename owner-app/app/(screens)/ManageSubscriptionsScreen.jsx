@@ -26,7 +26,7 @@ const SubscriptionCard = ({ item }) => {
   const planType =
     item.plan_type.charAt(0).toUpperCase() + item.plan_type.slice(1);
 
-  const planDetails = `${planType} Plan | $${price}/${cycle}`;
+  const planDetails = `${planType} Plan | Rs.${price}/${cycle}`;
 
   return (
     <View style={styles.card}>

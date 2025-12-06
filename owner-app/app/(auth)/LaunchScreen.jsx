@@ -31,8 +31,6 @@ const LaunchScreen = () => {
         </View>
         {/* Tagline */}
         <Text style={styles.tagline}>
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-          eiusmod.
         </Text>
 
         {/* Button Container */}

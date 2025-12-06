@@ -19,13 +19,12 @@ from app.models.owner_models.parking_slot_model import ParkingSlot
 from app.services.session_service import session_service
 
 # --- Configuration and Model Paths ---
-MODEL_CACHE_DIR = "/tmp/models"
-VEHICLE_MODEL_PATH = "/assets/yolo11n.pt"
-LPR_MODEL_PATH = "/assets/license-plate-finetune-v1n.pt"
+VEHICLE_MODEL_PATH = "yolo11n.pt"
+LPR_MODEL_PATH = "license-plate-finetune-v1n.pt"
 
 OCCUPIED_FRAME_THRESHOLD = 3
 EMPTY_FRAME_THRESHOLD = 3
-OCR_INTERVAL_SECONDS = 3
+OCR_INTERVAL_SECONDS = 2
 
 
 def cleanup_plate_text(raw_text: str) -> str:

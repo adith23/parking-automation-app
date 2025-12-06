@@ -109,7 +109,7 @@ const HomeScreen = () => {
           const ongoingPromise = api.get("/owner/bookings?status=ongoing");
           const completedPromise = api.get("/owner/bookings?status=completed");
           const analyticsPromise = api.get(
-            "/owner/analytics/summary?period=today"
+            "/owner/analytics"
           );
           const lotsPromise = api.get("/owner/parking-lots/");
 
