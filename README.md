@@ -416,16 +416,11 @@ curl -H "Authorization: Bearer <token>" \
 ]
 ```
 
-```
 ## 🏗️ Real-Time Communication Architecture
 
-|                      Real-Time Communication Architecture                                 |
-| :-------------------------------------------------------------------------------: |
-|           ![Architecture Diagram](screenshots/architecture.png)                   |
-
-```
-
-### Real-Time Data Flow
+|         Real-Time Communication Architecture          |
+| :---------------------------------------------------: |
+| ![Architecture Diagram](screenshots/architecture.png) |
 
 ```
 Camera Feed → CV Worker (YOLO detect + OCR) → Redis Pub/Sub → Backend Listener
@@ -448,8 +443,6 @@ Driver taps "Book" → POST /bookings (Redis SETNX lock, 60s TTL)
 | :-------------------------------------------------: |
 | ![Database Schema](screenshots/database-schema.png) |
 
-```
-
 **Key relationships:**
 
 - `ParkingLot` ↔ `SubscriptionPlan` — Many-to-many via `subscription_plan_lots`
@@ -466,7 +459,7 @@ Driver taps "Book" → POST /bookings (Redis SETNX lock, 60s TTL)
 
 http://parking-app-alb-1557007686.us-east-1.elb.amazonaws.com/api/v1
 
-````
+```
 
 ### Deployment Platform
 
@@ -502,7 +495,7 @@ python -m uvicorn app.main:app --reload
 
 # Access interactive API docs
 open http://localhost:8000/docs
-````
+```
 
 ### CV Worker (standalone test)
 
