@@ -18,16 +18,6 @@ const ParkingLotCard = ({ item, onStatusChange }) => {
   const isOpen = item.is_open;
   const status = isOpen ? "Open Now" : "Closed Now";
 
-  const handleDefineSlots = () => {
-    router.push({
-      pathname: "/(screens)/SlotDefinitionScreen",
-      params: {
-        parkingLotId: item.id,
-        parkingLotName: item.name,
-      },
-    });
-  };
-
   const handleLotView = () => {
     router.push({
       pathname: "/(screens)/LotViewScreen",
@@ -69,7 +59,7 @@ const ParkingLotCard = ({ item, onStatusChange }) => {
         <View style={styles.cardDetails}>
           <Text style={styles.detailText}>{item.total_slots} Slots</Text>
           <Text style={styles.detailText}> | </Text>
-          <Text style={styles.detailText}>${item.price_per_hour}/hr</Text>
+          <Text style={styles.detailText}>Rs.{item.price_per_hour}/hr</Text>
           <Text style={styles.detailText}> | </Text>
           <Text
             style={[
@@ -89,16 +79,10 @@ const ParkingLotCard = ({ item, onStatusChange }) => {
 
         <View style={styles.iconContainer}>
           <TouchableOpacity
-            style={styles.mapviewButton}
-            onPress={handleDefineSlots}
-          >
-            <MapView name="map-view" size={120} color="#333" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
             style={styles.lotviewButton}
             onPress={handleLotView}
           >
+            <Text style={styles.lotviewButtonText}>Parking Lot View</Text>
             <LotView name="lot-view" size={120} color="#333" />
           </TouchableOpacity>
         </View>
@@ -181,7 +165,20 @@ const styles = StyleSheet.create({
     paddingTop: 17,
   },
   lotviewButton: {
-    marginLeft: 15,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: "#000",
+    borderRadius: 25,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    backgroundColor: "#FFFD99",
+  },
+  lotviewButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
   },
   cardActions: {
     flexDirection: "column",

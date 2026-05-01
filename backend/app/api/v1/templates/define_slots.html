@@ -110,6 +110,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/webrtc-adapter@8.1.2/out/adapter.min.js"></script>
     <script>
+        // --- Injected by Backend ---
+        // This will be replaced by the backend with actual data or an empty array []
+        const existingPolygons = {{ existing_polygons }};
+    </script>
+    <script>
         const video = document.getElementById("video-stream");
         const canvas = document.getElementById("drawing-canvas");
         const ctx = canvas.getContext("2d");
@@ -119,6 +124,7 @@
         let currentPoints = [];
         let savedPolygons = [];
         let peerConnection = null;
+        let initialSlotsLoaded = false;
 
         // Correctly size canvas relative to parent container
         function resizeCanvas() {
@@ -137,9 +143,35 @@
             draw();
         }
 
+
+        function loadExistingPolygons() {
+            if (initialSlotsLoaded || !video.videoWidth) return;
+
+            // Calculate scale factor between video's native resolution and canvas display size
+            const scaleX = canvas.width / video.videoWidth;
+            const scaleY = canvas.height / video.videoHeight;
+
+            savedPolygons = existingPolygons.map(poly =>
+                poly.map(p => [
+                    Math.round(p[0] * scaleX),
+                    Math.round(p[1] * scaleY),
+                ])
+            );
+
+            initialSlotsLoaded = true;
+            draw(); // Redraw canvas with the loaded polygons
+        }
+
         // Wait for video dimensions before sizing
-        video.addEventListener("loadedmetadata", resizeCanvas);
-        window.addEventListener("resize", resizeCanvas);
+        video.addEventListener("loadedmetadata", () => {
+            resizeCanvas();
+            loadExistingPolygons(); // Load polygons now that we have dimensions
+        });
+        window.addEventListener("resize", () => {
+            resizeCanvas();
+            // We don't need to reload polygons on resize, just redraw
+            draw();
+        });
 
         // Compute coordinates relative to the canvas itself, not the whole page
         canvas.addEventListener("click", (event) => {
@@ -160,9 +192,9 @@
                 ctx.moveTo(poly[0][0], poly[0][1]);
                 poly.forEach((p) => ctx.lineTo(p[0], p[1]));
                 ctx.closePath();
-                ctx.fillStyle = "rgba(0, 255, 0, 0.4)"; 
+                ctx.fillStyle = "rgba(0, 255, 0, 0.4)";
                 ctx.fill();
-                ctx.strokeStyle = "#00ff00"; 
+                ctx.strokeStyle = "#00ff00";
                 ctx.stroke();
             });
 
