@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🅿️ EasyPark — Smart Parking Automation Platform
 
@@ -29,12 +29,14 @@ The system serves two user types through separate mobile apps: **Drivers** (sear
 ## ✨ Features
 
 ### For Drivers
+
 - 📍 **GPS-based parking search** — Find nearby lots within walking distance using PostGIS geo-queries
 - 🔖 **Two-phase booking** — Reserve a slot with Redis-based optimistic locking to prevent double-booking
 - 🚗 **Auto check-in/check-out** — License plate detected on arrival creates a session automatically
 - 📊 **Session history & cost tracking** — View parking duration and costs in real-time
 
 ### For Parking Lot Owners
+
 - 🏗️ **Lot management** — Register lots with GPS location, pricing, operating hours, and photos
 - 🎯 **Visual slot definition** — Draw parking slot polygons on camera images
 - 📹 **Live camera feed** — Watch lot activity via WebRTC video streaming with CV annotations
@@ -42,6 +44,7 @@ The system serves two user types through separate mobile apps: **Drivers** (sear
 - 💳 **Subscription plans** — Create tiered plans (Basic/Premium/Enterprise) for recurring parkers
 
 ### Computer Vision Pipeline
+
 - 🧠 **YOLO 11 + ByteTrack** — Multi-object vehicle tracking with persistent IDs across frames
 - 🔤 **Custom fine-tuned LPR model** — Detects license plates, EasyOCR reads the text
 - 🔄 **Frame threshold debouncing** — 3-frame threshold prevents status flickering
@@ -51,20 +54,20 @@ The system serves two user types through separate mobile apps: **Drivers** (sear
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend API** | Python 3.10, FastAPI, SQLAlchemy 2.0, Pydantic v2, Uvicorn |
-| **Database** | PostgreSQL + PostGIS (GeoAlchemy2) |
+| Layer               | Technology                                                 |
+| ------------------- | ---------------------------------------------------------- |
+| **Backend API**     | Python 3.10, FastAPI, SQLAlchemy 2.0, Pydantic v2, Uvicorn |
+| **Database**        | PostgreSQL + PostGIS (GeoAlchemy2)                         |
 | **Cache / Pub-Sub** | Redis 7.0 (geo indexing, slot availability, booking locks) |
-| **Real-time** | Socket.IO (python-socketio), WebRTC (aiortc) |
-| **Computer Vision** | YOLOv11 (Ultralytics), EasyOCR, OpenCV, ByteTrack, SciPy |
-| **Deep Learning** | PyTorch 2.3.1, CUDA 12.4 + cuDNN (GPU worker) |
-| **Mobile Apps** | React Native 0.79, Expo SDK 53, Expo Router 5 |
-| **Maps & Location** | Google Maps SDK (react-native-maps), expo-location |
-| **Auth** | JWT (python-jose) + bcrypt, OTP via Twilio |
-| **Cloud (AWS)** | ECS, ECR, ALB, RDS, ElastiCache, SQS, S3, Secrets Manager |
-| **CI/CD** | GitHub Actions → Docker → ECR |
-| **OCR Fallback** | Google Cloud Vision API |
+| **Real-time**       | Socket.IO (python-socketio), WebRTC (aiortc)               |
+| **Computer Vision** | YOLOv11 (Ultralytics), EasyOCR, OpenCV, ByteTrack, SciPy   |
+| **Deep Learning**   | PyTorch 2.3.1, CUDA 12.4 + cuDNN (GPU worker)              |
+| **Mobile Apps**     | React Native 0.79, Expo SDK 53, Expo Router 5              |
+| **Maps & Location** | Google Maps SDK (react-native-maps), expo-location         |
+| **Auth**            | JWT (python-jose) + bcrypt, OTP via Twilio                 |
+| **Cloud (AWS)**     | ECS, ECR, ALB, RDS, ElastiCache, SQS, S3, Secrets Manager  |
+| **CI/CD**           | GitHub Actions → Docker → ECR                              |
+| **OCR Fallback**    | Google Cloud Vision API                                    |
 
 ---
 
@@ -343,56 +346,56 @@ parking-automation-app/
 
 ### Driver Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|:----:|-------------|
-| `POST` | `/driver/register/` | ✗ | Register new driver |
-| `POST` | `/driver/login/` | ✗ | Login, returns JWT |
-| `GET` | `/driver/me/` | ✓ | Get current driver profile |
-| `GET` | `/driver/parking` | ✓ | Search nearby parking (lat, lng, radius) |
-| `GET` | `/driver/parking/text` | ✓ | Text-based parking search |
-| `GET` | `/driver/parking/{id}` | ✓ | Get lot details |
-| `GET` | `/driver/parking/{id}/availability` | ✓ | Get slot availability |
-| `POST` | `/driver/bookings` | ✓ | Initiate booking (acquires Redis lock) |
-| `POST` | `/driver/bookings/{id}/confirm` | ✓ | Confirm booking |
-| `POST` | `/driver/bookings/{id}/cancel` | ✓ | Cancel booking |
-| `GET` | `/driver/bookings` | ✓ | List driver's bookings |
-| `GET` | `/driver/sessions` | ✓ | List parking sessions |
-| `GET` | `/driver/sessions/active` | ✓ | List active sessions |
-| `GET` | `/driver/sessions/{id}` | ✓ | Get session details + cost |
+| Method | Endpoint                            | Auth | Description                              |
+| ------ | ----------------------------------- | :--: | ---------------------------------------- |
+| `POST` | `/driver/register/`                 |  ✗   | Register new driver                      |
+| `POST` | `/driver/login/`                    |  ✗   | Login, returns JWT                       |
+| `GET`  | `/driver/me/`                       |  ✓   | Get current driver profile               |
+| `GET`  | `/driver/parking`                   |  ✓   | Search nearby parking (lat, lng, radius) |
+| `GET`  | `/driver/parking/text`              |  ✓   | Text-based parking search                |
+| `GET`  | `/driver/parking/{id}`              |  ✓   | Get lot details                          |
+| `GET`  | `/driver/parking/{id}/availability` |  ✓   | Get slot availability                    |
+| `POST` | `/driver/bookings`                  |  ✓   | Initiate booking (acquires Redis lock)   |
+| `POST` | `/driver/bookings/{id}/confirm`     |  ✓   | Confirm booking                          |
+| `POST` | `/driver/bookings/{id}/cancel`      |  ✓   | Cancel booking                           |
+| `GET`  | `/driver/bookings`                  |  ✓   | List driver's bookings                   |
+| `GET`  | `/driver/sessions`                  |  ✓   | List parking sessions                    |
+| `GET`  | `/driver/sessions/active`           |  ✓   | List active sessions                     |
+| `GET`  | `/driver/sessions/{id}`             |  ✓   | Get session details + cost               |
 
 ### Owner Endpoints
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|:----:|-------------|
-| `POST` | `/owner/register/` | ✗ | Register new owner |
-| `POST` | `/owner/login/` | ✗ | Login, returns JWT |
-| `GET` | `/owner/me/` | ✓ | Get current owner profile |
-| `PUT` | `/owner/profile/` | ✓ | Update profile |
-| `POST` | `/owner/send-otp/` | ✓ | Send OTP for email/phone update |
-| `POST` | `/owner/verify-otp/` | ✓ | Verify OTP and update |
-| `POST` | `/owner/parking-lots/` | ✓ | Create parking lot |
-| `GET` | `/owner/parking-lots/` | ✓ | List owner's lots |
-| `GET` | `/owner/parking-lots/{id}` | ✓ | Get lot details |
-| `PUT` | `/owner/parking-lots/{id}` | ✓ | Update lot |
-| `PATCH` | `/owner/parking-lots/{id}/status` | ✓ | Open/close lot |
-| `POST` | `/owner/slot-definitions/` | ✓ | Define slot polygons |
-| `GET` | `/owner/slot-definitions/{lot_id}` | ✓ | Get slot definitions |
-| `GET` | `/owner/bookings/{lot_id}` | ✓ | View lot bookings |
-| `GET` | `/owner/analytics` | ✓ | Revenue + booking analytics |
-| `GET` | `/owner/analytics/summary` | ✓ | Summary for today/all-time |
-| `CRUD` | `/owner/subscription-plans/` | ✓ | Full CRUD on subscription plans |
-| `POST` | `/owner/subscription-plans/{id}/activate` | ✓ | Activate plan |
-| `GET` | `/owner/subscription-plans/{id}/statistics` | ✓ | Plan stats + subscriber metrics |
-| `GET` | `/owner/subscription-plans/dashboard/overview` | ✓ | Subscription dashboard |
-| `WS` | `/owner/parking-lots-view/ws/{id}/live-view` | — | WebRTC live camera feed |
+| Method  | Endpoint                                       | Auth | Description                     |
+| ------- | ---------------------------------------------- | :--: | ------------------------------- |
+| `POST`  | `/owner/register/`                             |  ✗   | Register new owner              |
+| `POST`  | `/owner/login/`                                |  ✗   | Login, returns JWT              |
+| `GET`   | `/owner/me/`                                   |  ✓   | Get current owner profile       |
+| `PUT`   | `/owner/profile/`                              |  ✓   | Update profile                  |
+| `POST`  | `/owner/send-otp/`                             |  ✓   | Send OTP for email/phone update |
+| `POST`  | `/owner/verify-otp/`                           |  ✓   | Verify OTP and update           |
+| `POST`  | `/owner/parking-lots/`                         |  ✓   | Create parking lot              |
+| `GET`   | `/owner/parking-lots/`                         |  ✓   | List owner's lots               |
+| `GET`   | `/owner/parking-lots/{id}`                     |  ✓   | Get lot details                 |
+| `PUT`   | `/owner/parking-lots/{id}`                     |  ✓   | Update lot                      |
+| `PATCH` | `/owner/parking-lots/{id}/status`              |  ✓   | Open/close lot                  |
+| `POST`  | `/owner/slot-definitions/`                     |  ✓   | Define slot polygons            |
+| `GET`   | `/owner/slot-definitions/{lot_id}`             |  ✓   | Get slot definitions            |
+| `GET`   | `/owner/bookings/{lot_id}`                     |  ✓   | View lot bookings               |
+| `GET`   | `/owner/analytics`                             |  ✓   | Revenue + booking analytics     |
+| `GET`   | `/owner/analytics/summary`                     |  ✓   | Summary for today/all-time      |
+| `CRUD`  | `/owner/subscription-plans/`                   |  ✓   | Full CRUD on subscription plans |
+| `POST`  | `/owner/subscription-plans/{id}/activate`      |  ✓   | Activate plan                   |
+| `GET`   | `/owner/subscription-plans/{id}/statistics`    |  ✓   | Plan stats + subscriber metrics |
+| `GET`   | `/owner/subscription-plans/dashboard/overview` |  ✓   | Subscription dashboard          |
+| `WS`    | `/owner/parking-lots-view/ws/{id}/live-view`   |  —   | WebRTC live camera feed         |
 
 ### System Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/health` | ALB health check |
-| `GET` | `/ready` | Readiness check (DB connectivity) |
-| `WS` | `/ws/socket.io` (ns: `/driver-search`) | Real-time slot availability updates |
+| Method | Endpoint                               | Description                         |
+| ------ | -------------------------------------- | ----------------------------------- |
+| `GET`  | `/health`                              | ALB health check                    |
+| `GET`  | `/ready`                               | Readiness check (DB connectivity)   |
+| `WS`   | `/ws/socket.io` (ns: `/driver-search`) | Real-time slot availability updates |
 
 ### Example: Search Nearby Parking
 
@@ -408,7 +411,7 @@ curl -H "Authorization: Bearer <token>" \
     "name": "City Center Parking",
     "address": "123 Main St",
     "total_slots": 50,
-    "price_per_hour": 2.50,
+    "price_per_hour": 2.5,
     "distance_meters": 230.5,
     "is_open": true
   }
@@ -536,6 +539,7 @@ Driver taps "Book" → POST /bookings (Redis SETNX lock, 60s TTL)
 ```
 
 **Key relationships:**
+
 - `ParkingLot` ↔ `SubscriptionPlan` — Many-to-many via `subscription_plan_lots`
 - `ParkingSession` links to `Booking` (pre-booked) or is created as walk-in (booking_id = null)
 - License plates are fuzzy-matched (Levenshtein distance < 2) to handle OCR errors
@@ -564,6 +568,7 @@ http://parking-app-alb-1557007686.us-east-1.elb.amazonaws.com/api/v1
 ### CI/CD Pipeline
 
 On push to `main`, GitHub Actions automatically:
+
 1. Builds the backend Docker image (multi-stage, `python:3.10-slim`)
 2. Tags with Git SHA
 3. Pushes to AWS ECR (`parking-api-cv`)
@@ -634,4 +639,3 @@ This project is licensed under the [MIT License](LICENSE).
 **Built with ❤️ using FastAPI, React Native, YOLO, and AWS**
 
 </div>
-]]>
