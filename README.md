@@ -416,39 +416,12 @@ curl -H "Authorization: Bearer <token>" \
 ]
 ```
 
----
+```
+## 🏗️ Real-Time Communication Architecture
 
-## 🏗️ Architecture
-
-```mermaid
-graph TB
-    subgraph Cloud [AWS Cloud]
-        direction TB
-        ALB[Application Load Balancer]
-        Backend[ECS: Backend API]
-        CVWorker[ECS: CV Worker GPU]
-        RDS[(RDS: PostgreSQL + PostGIS)]
-        Redis[(ElastiCache: Redis)]
-        SQS[SQS: Task Queue]
-        S3[S3: Models & Media]
-        Secrets[Secrets Manager]
-    end
-
-    Driver[Driver App Expo/RN]
-    Owner[Owner App Expo/RN]
-
-    Driver <--> ALB
-    Owner <--> ALB
-    ALB <--> Backend
-    Backend <--> RDS
-    Backend <--> Redis
-    Backend --> SQS
-    CVWorker <-- Long Polling --> SQS
-    CVWorker <--> Redis
-    CVWorker <--> RDS
-    CVWorker --> S3
-    Backend --> Secrets
-    CVWorker --> Secrets
+|                      Real-Time Communication Architecture                                 |
+| :-------------------------------------------------------------------------------: |
+|           ![Architecture Diagram](screenshots/architecture.png)                   |
 
 ```
 
@@ -471,70 +444,10 @@ Driver taps "Book" → POST /bookings (Redis SETNX lock, 60s TTL)
 
 ## 🗄️ Database Schema
 
-```
-┌──────────────────┐       ┌──────────────────┐
-│ parking_lot_     │       │    drivers       │
-│ owners           │       ├──────────────────┤
-├──────────────────┤       │ id (PK)          │
-│ id (PK)          │       │ name             │
-│ name             │       │ email (unique)   │
-│ email (unique)   │       │ phone_number     │
-│ phone_number     │       │ password_hash    │
-│ password_hash    │       └────────┬─────────┘
-└────────┬─────────┘                │
-         │                          │ 1:N
-         │ 1:N                      ▼
-         ▼                 ┌──────────────────┐
-┌──────────────────┐       │    vehicles      │
-│  parking_lots    │       ├──────────────────┤
-├──────────────────┤       │ id (PK)          │
-│ id (PK)          │       │ driver_id (FK)   │
-│ name             │       │ license_plate    │
-│ address          │       │ vehicle_type     │
-│ gps_coordinates  │       └────────┬─────────┘
-│   (PostGIS)      │                │
-│ total_slots      │                │
-│ price_per_hour   │       ┌────────▼─────────┐
-│ open_time        │       │    bookings      │
-│ close_time       │       ├──────────────────┤
-│ is_open          │◀──────│ parking_lot_id   │
-│ additional_info  │       │ parking_slot_id  │
-│ media_urls       │       │ driver_id (FK)   │
-│ owner_id (FK)    │       │ license_plate    │
-└────────┬─────────┘       │ status (enum)    │
-         │                 │ expires_at       │
-         │ 1:N             │ confirmed_at     │
-         ▼                 └──────────────────┘
-┌──────────────────┐
-│  parking_slots   │       ┌──────────────────┐
-├──────────────────┤       │ parking_sessions │
-│ id (PK)          │       ├──────────────────┤
-│ parking_lot_id   │◀──────│ parking_slot_id  │
-│ slot_number      │       │ parking_lot_id   │
-│ status           │       │ vehicle_id (FK)  │
-│ location         │       │ booking_id (FK)  │
-│   (PostGIS poly) │       │ license_plate    │
-│ last_updated_at  │       │ start_time       │
-└──────────────────┘       │ end_time         │
-                           │ parking_cost     │
-                           │ status (enum)    │
-                           └──────────────────┘
+|                 Database ER Schema                  |
+| :-------------------------------------------------: |
+| ![Database Schema](screenshots/database-schema.png) |
 
-┌──────────────────┐       ┌──────────────────┐
-│subscription_plans│       │driver_           │
-├──────────────────┤       │ subscriptions    │
-│ id (PK)          │◀──────├──────────────────┤
-│ owner_id (FK)    │       │ plan_id (FK)     │
-│ name             │       │ driver_id (FK)   │
-│ plan_type (enum) │       │ status           │
-│ monthly_price    │       │ start_date       │
-│ annual_price     │       │ next_billing_date│
-│ billing_cycle    │       │ current_price    │
-│ max_vehicles     │       └──────────────────┘
-│ status (enum)    │
-│ is_featured      │       N:M via subscription_plan_lots
-│ max_subscribers  │◀─────▶ parking_lots
-└──────────────────┘
 ```
 
 **Key relationships:**
@@ -550,8 +463,10 @@ Driver taps "Book" → POST /bookings (Redis SETNX lock, 60s TTL)
 ### Live API
 
 ```
+
 http://parking-app-alb-1557007686.us-east-1.elb.amazonaws.com/api/v1
-```
+
+````
 
 ### Deployment Platform
 
@@ -587,7 +502,7 @@ python -m uvicorn app.main:app --reload
 
 # Access interactive API docs
 open http://localhost:8000/docs
-```
+````
 
 ### CV Worker (standalone test)
 
