@@ -420,35 +420,36 @@ curl -H "Authorization: Bearer <token>" \
 
 ## 🏗️ Architecture
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                        AWS Cloud                                  │
-│                                                                    │
-│  ┌─────────┐    ┌──────────────────┐    ┌───────────────────┐    │
-│  │   ALB   │───▶│  ECS: Backend    │───▶│  RDS (PostgreSQL  │    │
-│  │         │    │  FastAPI + ASGI  │    │  + PostGIS)       │    │
-│  └────┬────┘    └───────┬──────────┘    └───────────────────┘    │
-│       │                 │                                         │
-│       │                 ▼                                         │
-│       │         ┌──────────────────┐    ┌───────────────────┐    │
-│       │         │  ElastiCache     │◀──▶│  ECS: CV Worker   │    │
-│       │         │  (Redis)         │    │  (GPU + CUDA)     │    │
-│       │         └──────────────────┘    └────────┬──────────┘    │
-│       │                                          │                │
-│       │         ┌──────────────────┐    ┌────────▼──────────┐    │
-│       │         │  SQS (Task Q)   │    │  S3 (ML Models    │    │
-│       │         └──────────────────┘    │  + Media)         │    │
-│       │                                 └───────────────────┘    │
-│       │         ┌──────────────────┐                              │
-│       │         │ Secrets Manager  │                              │
-│       │         └──────────────────┘                              │
-└───────┼──────────────────────────────────────────────────────────┘
-        │
-        ▼
-┌───────────────┐    ┌───────────────┐
-│  Driver App   │    │  Owner App    │
-│  (Expo/RN)    │    │  (Expo/RN)    │
-└───────────────┘    └───────────────┘
+```mermaid
+graph TB
+    subgraph Cloud [AWS Cloud]
+        direction TB
+        ALB[Application Load Balancer]
+        Backend[ECS: Backend API]
+        CVWorker[ECS: CV Worker GPU]
+        RDS[(RDS: PostgreSQL + PostGIS)]
+        Redis[(ElastiCache: Redis)]
+        SQS[SQS: Task Queue]
+        S3[S3: Models & Media]
+        Secrets[Secrets Manager]
+    end
+
+    Driver[Driver App Expo/RN]
+    Owner[Owner App Expo/RN]
+
+    Driver <--> ALB
+    Owner <--> ALB
+    ALB <--> Backend
+    Backend <--> RDS
+    Backend <--> Redis
+    Backend --> SQS
+    CVWorker <-- Long Polling --> SQS
+    CVWorker <--> Redis
+    CVWorker <--> RDS
+    CVWorker --> S3
+    Backend --> Secrets
+    CVWorker --> Secrets
+
 ```
 
 ### Real-Time Data Flow
