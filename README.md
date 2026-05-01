@@ -85,12 +85,10 @@ screenshots/
 └── cv-detection-demo.gif
 ```
 
-<!-- Uncomment and update paths when screenshots are available:
-| Driver App | Owner App |
-|:---:|:---:|
-| ![Map Search](screenshots/driver-map-search.png) | ![Dashboard](screenshots/owner-dashboard.png) |
-| ![Booking](screenshots/driver-booking-flow.png) | ![Live View](screenshots/owner-live-view.png) |
--->
+|                    Driver App                    |                   Owner App                   |
+| :----------------------------------------------: | :-------------------------------------------: |
+| ![Map Search](screenshots/driver-map-search.png) |   ![Dashboard](screenshots/owner-home.png)    |
+|     ![Booking](screenshots/driver-home.png)      | ![Live View](screenshots/owner-analytics.png) |
 
 ---
 
@@ -625,17 +623,3 @@ npx expo start
 This project is licensed under the [MIT License](LICENSE).
 
 ---
-
-## 📬 Contact
-
-- **GitHub:** [github.com/your-username](https://github.com/your-username)
-- **LinkedIn:** [linkedin.com/in/your-profile](https://linkedin.com/in/your-profile)
-- **Email:** your.email@example.com
-
----
-
-<div align="center">
-
-**Built with ❤️ using FastAPI, React Native, YOLO, and AWS**
-
-</div>
